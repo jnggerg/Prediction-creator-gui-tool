@@ -17,8 +17,7 @@ class PredictionTemplate(Base):
     title = Column(String, nullable=False)
     option_a = Column(String, nullable=False)
     option_b = Column(String, nullable=False)
-    option_c = Column(String, nullable=True)  
-    option_c: str = None                        # temp 3rd option, will need more possibly(?)
+    option_c = Column(String, nullable=True)  # temp 3rd option, will need more possibly(?)     
     duration = Column(Integer, default=90)
 
 Base.metadata.create_all(bind=engine)
@@ -61,7 +60,7 @@ def get_template(template_id: int):
 @app.post("/templates")
 def add_template(template: TemplateCreate):
     db = SessionLocal()
-    new_template = PredictionTemplate(template.model_dump())
+    new_template = PredictionTemplate(**template.model_dump())
     db.add(new_template)
     db.commit()
     db.refresh(new_template)
