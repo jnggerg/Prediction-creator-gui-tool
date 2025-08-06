@@ -5,9 +5,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 app = FastAPI()
-Base = declarative_base()
 
 # sqlite db start
+Base = declarative_base()
 engine = create_engine("sqlite:///predictions.db") #create / start local sqlite db
 SessionLocal = sessionmaker(bind=engine)
 
@@ -19,7 +19,7 @@ class PredictionTemplate(Base):
     option_b = Column(String, nullable=False)
     option_c = Column(String, nullable=True)  
     option_c: str = None                        # temp 3rd option, will need more possibly(?)
-    duration = Column(Integer, default=120)
+    duration = Column(Integer, default=90)
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,7 +28,8 @@ class TemplateCreate(BaseModel):
     title: str
     option_a: str
     option_b: str
-    duration: int = 120
+    option_c: str = None  # Optional third option
+    duration: int = 90
 
 #used for output formatting since sqlalchemy uses python object, order is not preserved
 class TemplateResponse(BaseModel):
@@ -37,7 +38,7 @@ class TemplateResponse(BaseModel):
     option_a: str
     option_b: str
     option_c: str = None  
-    duration: int
+    duration: int = 90
     class Config: #for alchemy parsing
         orm_mode = True
 
@@ -60,7 +61,7 @@ def get_template(template_id: int):
 @app.post("/templates")
 def add_template(template: TemplateCreate):
     db = SessionLocal()
-    new_template = PredictionTemplate(**template.model_dump())
+    new_template = PredictionTemplate(template.model_dump())
     db.add(new_template)
     db.commit()
     db.refresh(new_template)
