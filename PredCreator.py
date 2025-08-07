@@ -1,7 +1,7 @@
 import requests 
 import json
 import tkinter as tk
-from tkinter import *
+from tkinter import messagebox, Button, Label, Entry, ttk
 from dotenv import load_dotenv
 import os
 import threading
@@ -27,7 +27,7 @@ def CreatePrediction(title, options, duration):
             "outcomes": [{"title": option} for option in options],
             "prediction_window": duration
         }
-        response = requests.post(url, headers=headers, json=payload).json()
+        response = requests.post(url, headers=headers, json=payload)
 
         if response.status_code == 200:
             print("Prediction created successfully:", response)
@@ -114,10 +114,10 @@ class PredictionGUI:
         manage_pred_btn = Button(self.gui, text="Manage my predictions", command=self.ManagePredictions)
         manage_pred_btn.grid(row=2, column=0, padx=10, pady=5)
 
-    def AddNewPrediction(self):
+    def AddNewPrediction(self): #add new prediction to database
         add_window = tk.Toplevel(self.gui)
         add_window.title("Add New Prediction")
-        add_window.geometry("300x200")
+        add_window.geometry("400x350")
 
         title_label = Label(add_window, text="Prediction Title:")
         title_label.pack(pady=5)
@@ -142,17 +142,24 @@ class PredictionGUI:
 
                 if not title:
                     print("Title cannot be empty")
+                    messagebox.showerror("Error", f"Add a title")
                     return
                 if not options:
                     print("Options cannot be empty")
+                    messagebox.showerror("Error", f"Add options")
                     return
                 
                 options = [opt.strip() for opt in options.split(",")][:3] # max 3 options
                 if len(options) < 2:
                     print("At least two options are required")
+                    messagebox.showerror("Error", f"At least two options are required")
                     return
-                if not duration.isdigit() or int(duration) <= 30:
+                
+                if not duration:
+                    duration = 90 #default value
+                elif not duration.isdigit() or int(duration) <= 30:
                     print("Duration must be an integer and atleast 30 seconds")
+                    messagebox.showerror("Error", f"Duration must be an integer and atleast 30 seconds")
                     return
                 
                 prediction = {
@@ -166,13 +173,16 @@ class PredictionGUI:
                 response = requests.post("http://localhost:8000/templates", json=prediction) #post to database
                 if response.status_code == 200:
                     print("Prediction added to database:", response.json())
+                    messagebox.showinfo("Success", "Prediction added successfully to database")
                 else:
                     print("Failed to add prediction to database:", response.text)
+                    messagebox.showerror("Erorr", "Couldnt add prediction to database", response.text)
                 add_window.destroy()
             except Exception as e:
-                print("Error submitting prediction:", e)      
+                print("Error submitting prediction:", e)
+                messagebox.showerror("Error", f"Failed to submit prediction: {e}")
 
-        submit_button = tk.Button(add_window, text="Submit", command=submit_prediction)
+        submit_button = Button(add_window, text="Submit", command=submit_prediction)
         submit_button.pack()
 
 
@@ -185,20 +195,28 @@ class PredictionGUI:
                     print("No predictions found in the database.")
                     return
                 
+                size_x = max(len(preds) * 30 + 50, 400) #calculate height based on number of predictions
+                size_y = 400
                 select_window = tk.Toplevel(self.gui)
                 select_window.title("Select Prediction")
-                select_window.geometry("400x300")
+                select_window.geometry(f"{size_x}x{size_y}")  #todo: pagiantion, size option len truncate
 
                 for i, pred in enumerate(preds):
-                    text = f"{pred['title']} - {pred['option_a']} | {pred['option_b']}"
-                    if pred.get('option_c'):
+                    if len(pred['title']) > 50: #truncate title if too long
+                        pred['title'] = pred['title'][:30] + "..."
+                    text = f"{pred['title']} \n {pred['option_a']} | {pred['option_b']}"
+
+                    if pred.get('option_c'): #if option_c doesnt exist .get will return none instead of keyerror
                         text += f" | {pred['option_c']}"
-                    pred_button = Button(select_window, text=text, command=lambda p=pred: self.use_prediction(p))
+
+                    options = [pred['option_a'], pred['option_b']]
+                    pred_button = Button(select_window, text=text, command=lambda: CreatePrediction(pred['title'], options, pred['duration']))
                     pred_button.pack(padx = 10,pady=5, fill='x')
             else:
                 print(f"Error getting prediction templates: {response.status_code}, {response.text}")
         except Exception as e:
             print(f"Error: {e}")
+
 
     def ManagePredictions(self):
         pass #to be implemented
