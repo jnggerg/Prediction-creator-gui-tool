@@ -40,8 +40,8 @@ Base.metadata.create_all(bind=engine)
 class TemplateCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=45)
     option_a: str = Field(..., min_length=1, max_length=25)
-    option_b: str = Field(..., min_length=1, max_length=25)
-    option_c: Optional[str] = Field(None, max_length=50)  # Optional third option
+    option_b: str = Field(..., min_length=1, max_length=25) #lengths are determined by twitch
+    option_c: Optional[str] = Field(None, max_length=25)  # Optional third option
     duration: int = Field(90, ge=30, le=1800)  # Default 90 seconds, min 30, max 1800 sec
 
     @field_validator("title", "option_a", "option_b", "option_c")
