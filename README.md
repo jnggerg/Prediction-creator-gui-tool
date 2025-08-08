@@ -25,17 +25,16 @@ A simple Python project using a local SQLite database with FastAPI for Twitch st
      - Client ID (from your Twitch Developer app)
      - Client Secret (from your Twitch Developer app)
      - Redirect URL (`https://localhost:5000`)
-     - Channel name for the program
+     - Channel name to run predictions on
 
 3. **Run the Application**
    - After setup is complete, run the main application:
-     ```bash
-     python Predcreator.py
-     ```
+     - **Windows**: `py PredCreator.py`
+     - **Mac/Linux**: `python3 PredCreator.py`
 
 ## Important Notes
 
-⚠️ **For Moderators**: If you are just a moderator for the channel, you need to ask the streamer to create the app in the developer console and share the Client ID and Secret with you. Moderators don't have permission to interact with a channel through the API using their own credentials.
+⚠️ **For Moderators**: If you are just a moderator for the channel, you need to ask the streamer to run the setup and send you the ".env" file, as this requires Twitch OAuth2, which you need to sign in for to get the needed API token.
 
 ## Features
 
