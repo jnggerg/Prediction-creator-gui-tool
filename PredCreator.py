@@ -5,10 +5,10 @@ import os, time, threading, requests
 import uvicorn
 from dbServer import app
 from TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
-from GenerateAiPred import *
+from GenerateAiPred import *    #ai interaction handled here
 
 '''
-This is the main GUI component of the program
+This is the main GUI component of the program, that
 '''
 
 load_dotenv()
@@ -34,9 +34,9 @@ def validate_prediction_data(title, options, duration) -> bool:
     
     if not duration:
         duration = 90 #for validation only, wont get passed back
-    elif not duration.isdigit() or int(duration) < 30 or int(duration) > 1800: #same as twitch api
-        print("Duration must be an integer and atleast 30 seconds")
-        messagebox.showerror("Error", f"Duration must be an integer and between 30 and 1800 seconds")
+    elif isinstance(duration, str) and not duration.isdigit() or int(duration) < 30 or int(duration) > 1800: #same as twitch api
+        print("Duration must be an integer and between 30 and 1800 seconds")
+        messagebox.showerror("Error", "Duration must be an integer and between 30 and 1800 seconds")
         return False
     
     return True
@@ -48,7 +48,7 @@ class PredictionGUI:
         self.gui.title("Prediction Creator Tool")
         self.setup_widgets()
 
-    def refresh_gui(self):
+    def refresh_gui(self): #refresh the GUI so that current / last prediction displays properly
         for widget in self.gui.winfo_children():
             widget.destroy()
         self.setup_widgets()
@@ -65,6 +65,7 @@ class PredictionGUI:
             no_current_prediction = Label(self.gui, text="No Prediction running currently.\n Would like to rerun the previous one?")
             no_current_prediction.pack(pady=10)
             previous_prediction = getLastPrediction()
+            print(previous_prediction)
             t,o,d = previous_prediction["title"], [x["title"] for x in previous_prediction["outcomes"]], previous_prediction["prediction_window"]
             
             display_outcomes = " | ".join(o)
@@ -102,7 +103,7 @@ class PredictionGUI:
             delete_button.pack(side=tk.RIGHT,padx=5)
 
         if use_ai:
-            reccommend_ai_predictions = Button(self.gui, text="Would you like to get Ai recommendations?", command=self.GenerateAIPrediction)
+            reccommend_ai_predictions = Button(self.gui, text="Would you like to get Ai recommendations? (will take a few seconds)", command=self.GenerateAIPrediction)
             reccommend_ai_predictions.pack(pady=10)
         
     def GenerateAIPrediction(self):
@@ -155,12 +156,11 @@ class PredictionGUI:
         def submit_prediction():
             try:
                 title = title_entry.get().strip()
-                options = options_entry.get().strip()
                 duration = duration_entry.get().strip()
-                options = [opt.strip() for opt in options.split(",")][:3] # max 3 options, rest ignored if more given
+                options = [opt.strip() for opt in options_entry.get().split(",")][:3] # max 3 options, rest ignored if more given
 
                 if not validate_prediction_data(title, options, duration):
-                    return  # Validation failed, do not proceed
+                    return  
                 
                 if not duration:
                     duration = 90
@@ -194,12 +194,59 @@ class PredictionGUI:
             CreatePrediction(title, options, duration) #create prediction on twitch
             add_window.destroy()
             self.refresh_gui()
+
+        def StartAndSave():
+            title = title_entry.get().strip()
+            options = [opt.strip() for opt in options_entry.get().strip().split(",")][:3]
+            duration = duration_entry.get().strip()
+
+            if not validate_prediction_data(title, options, duration):
+                return
+
+            if not duration:
+                duration = 90
+            CreatePrediction(title, options, duration) #create prediction on twitch
+
+            if not validate_prediction_data(title, options, duration):
+                    return  
+
+            prediction = {
+                "title": title,
+                "option_a": options[0],
+                "option_b": options[1],
+                "option_c": options[2] if len(options) > 2 else None,
+                "duration": int(duration)
+            }
+
+            response = requests.post(DB_URL, json=prediction, timeout=5) #post to database
+            if response.status_code == 200:
+                print("Prediction added to database:", response.json())
+                messagebox.showinfo("Success", "Prediction added successfully to database")
+            else:
+                print("Failed to add prediction to database:", response.text)
+                messagebox.showerror("Erorr", f"Couldnt add prediction to database:{response.text}")
+
+            add_window.destroy()
+            self.refresh_gui()
      
         submit_button = Button(add_window, text="Add to database", command=submit_prediction)
         submit_button.pack(pady=5)
         create_button = Button(add_window, text="Start prediction", command=StartPrediction)
         create_button.pack(pady=5)
+        submit_and_create_button = Button(add_window, text="Start and Save to database", command=StartAndSave)
+        submit_and_create_button.pack(pady=5)
         
+    def DeletePrediction(self, id):
+        try:
+            response = requests.delete(url=DB_URL + f"/{id}")
+            response.raise_for_status()
+
+            messagebox.showinfo("Success", "Prediction Deleted successfully!")
+            return True
+        except requests.exceptions.HTTPError as e:
+            messagebox.showerror("Error","Could not delete prediction from database: {e}")
+            return False
+    
     def SelectPredictions(self): #listing all existing predictions from database
         try:
             response = requests.get(DB_URL, timeout=5)
@@ -212,37 +259,59 @@ class PredictionGUI:
             
             select_window = tk.Toplevel(self.gui)
             select_window.title("Select Prediction")
-            select_window.geometry("600x500")  #todo: pagiantion, size option len truncate
+            select_window.geometry("600x500")
 
-            def StartCloseRefreshGUI(title,outcomes,dur):
-                    CreatePrediction(title, outcomes, dur) #create prediction on twitch
-                    select_window.destroy()
-                    self.refresh_gui()
+            #scrollbar for the menu
+            main_frame = tk.Frame(select_window)
+            main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            canvas = tk.Canvas(main_frame)
+            scrollbar = tk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
+            
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            
+            scrollable_frame = tk.Frame(canvas)
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+            def StartCloseRefreshGUI(title, outcomes, dur): #func only for button
+                CreatePrediction(title, outcomes, dur) 
+                select_window.destroy()
+                self.refresh_gui()
+
+            def DeleteFromDbAndRefresh(pred_id):
+                if self.DeletePrediction(pred_id):
+                    select_window.destroy()  #refreshes list
+                    self.SelectPredictions()  
 
             for i, pred in enumerate(preds):
                 displayed_title = pred['title']
-
                 text = f"{displayed_title} \n {pred['option_a']} | {pred['option_b']}"
 
                 options = [pred['option_a'], pred['option_b']]
-                if pred.get('option_c'): #if option_c doesnt exist .get will return none instead of keyerror
+                if pred.get('option_c'):
                     text += f" | {pred['option_c']}"
                     options.append(pred['option_c'])
 
-                pred_button = Button(select_window, text=text, 
-                command=(lambda p=pred, opts=options: StartCloseRefreshGUI(p['title'], opts, p['duration'])))
+                row_frame = tk.Frame(scrollable_frame)
+                row_frame.pack(fill='x', padx=10, pady=5)
 
-                pred_button.pack(padx = 10,pady=5, fill='x')
+                pred_button = tk.Button(row_frame, text=text,
+                    command=lambda p=pred, opts=options: StartCloseRefreshGUI(p['title'], opts, p['duration']))
+                pred_button.pack(side=tk.LEFT,padx=(0,5),expand=True, fill='both')
+
+                delete_pred_btn = tk.Button(row_frame, text="DEL", command= lambda p_id=pred['id']: DeleteFromDbAndRefresh(p_id))
+                delete_pred_btn.pack(side=tk.RIGHT,padx=(5,0))
+
+            scrollable_frame.update_idletasks()
+            canvas.configure(scrollregion=canvas.bbox("all"))
 
         except requests.exceptions.RequestException as e:
             messagebox.showerror("Error", f"Failed to connect to server: {e}")
         except Exception as e:
             messagebox.showerror("Error", f"Unexpected error: {e}")
-
-    def GenerateAiPrediction(self):
-        # Placeholder for AI prediction generation logic
-        print("AI prediction generation not implemented yet.")
-        messagebox.showinfo("Info", "AI prediction generation is not implemented yet.")
 
     def start(self):
         self.gui.mainloop()
@@ -253,7 +322,7 @@ def StartServer():
 if __name__ == "__main__":
     server_thread = threading.Thread(target=StartServer, daemon=True) #run the server in seperate thread
     server_thread.start()
-    time.sleep(2) #wait for server start
+    time.sleep(1) #wait for server start
 
     app = PredictionGUI()
     app.start()
