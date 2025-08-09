@@ -9,6 +9,7 @@ CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 TOKEN = os.getenv("TWITCH_ACCESS_TOKEN")
 BROADCASTER_ID = os.getenv("TWITCH_BROADCASTER_ID")
 
+#global API header and url since all calls use the same endpoint
 headers = {
     "Client-Id": CLIENT_ID,
     "Authorization": f"Bearer {TOKEN}",
@@ -38,13 +39,12 @@ def CreatePrediction(title: str, options: List[str], duration: int):
             print("Error creating prediction:", e)
             return None
         
-def getCurrentPrediction():
+def getCurrentPrediction(): #used to return the "ACTIVE" / "LOCKED" prediction (which is always the most recent, since there cant be 2 unclosed predictions
     try:
         response = requests.get(url, headers=headers, params={"broadcaster_id": BROADCASTER_ID}, timeout=10)
         response = response.json()
         most_recent_prediction = response["data"][0]    #request returns all past predictions, in descending chronological order
-                                                        #so only need to check status of most recent
-        if most_recent_prediction["status"] == "ACTIVE" or most_recent_prediction["status"] == "LOCKED":  
+        if most_recent_prediction["status"] == "ACTIVE" or most_recent_prediction["status"] == "LOCKED":    
             return most_recent_prediction
         else:
             return {}
@@ -54,11 +54,11 @@ def getCurrentPrediction():
         messagebox.showerror("Error", "Couldnt get current prediction info: {e}")
         return {}
 
-def getLastPrediction():
+def getLastPrediction(): #used to returned last CLOSED prediction
     try:
         response = requests.get(url, headers=headers, params={"broadcaster_id": BROADCASTER_ID}, timeout=10)
         response = response.json()
-        most_recent_prediction = response["data"][0]    #request returns all past predictions, in descending chronological order
+        most_recent_prediction = response["data"][0]
         return most_recent_prediction
         
     except requests.exceptions.RequestException as e:
@@ -72,7 +72,7 @@ def DeletePrediction():
         print("No active prediction found")
         return
     
-    current_pred_id = current_pred["data"][0]["id"]
+    current_pred_id = current_pred["id"]
 
     params = {
         "broadcaster_id": BROADCASTER_ID,
@@ -82,7 +82,7 @@ def DeletePrediction():
     response =requests.patch(url, headers=headers,params=params, timeout=10)
     print(response.status_code, response.text)
 
-def EndPrediction(outcome: int= None): # choosing outcome
+def EndPrediction(outcome: int= None): # choosing winning outcome
     if outcome is None or outcome < 0 or outcome > 2:
         print("No valid outcome given (0<outcome<4)")
         return
@@ -109,3 +109,23 @@ def EndPrediction(outcome: int= None): # choosing outcome
     response = requests.patch(url, headers=headers, params=params, timeout=10)
     print(f"Prediction ended {response.status_code}, {response.text}")
 
+def GetCurrentGameAndTitle():
+    url = "https://api.twitch.tv/helix/channels"
+    params = {"broadcaster_id": BROADCASTER_ID}
+    
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data["data"]:
+            channel = data["data"][0]
+            return {
+                "game_name": channel["game_name"],  
+                "title": channel["title"]
+            }
+        return None
+        
+    except requests.exceptions.RequestException as e:
+        print("Error fetching channel info:", e)
+        return None
