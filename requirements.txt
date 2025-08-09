@@ -1,8 +1,8 @@
-uvicorn
-fastapi
-sqlalchemy
-pydantic
 requests
-python-dotenv
+dotenv
+fastapi
+pydantic
+sqlalchemy
+uvicorn
 langchain
-langchain-openai
+langchain_openai
