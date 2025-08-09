@@ -2,6 +2,12 @@
 
 A simple Python project using a local SQLite database with FastAPI and tkinter GUI for Twitch streamers and moderators to make creating predictions easier to run and set up, with optional AI recommendations using Langchain/OpenAI.
 
+## How it works
+- init.py install all the dependencies from requirements.txt, gets Twitch user access token and creates .env file
+- PredCreator.py (the main program) starts a uvicorn server hosting the SQLiteDB with SQLAlchemy locally and sets up FastAPI endpoints on a seperate thread (dbServer.py) and launches the tkinter GUI the user can interact with
+- TwitchApiHandler.py handles all the interactions with Twitch API, including getting refresh tokens if any request gets a 401 error in response
+- GenerateAiPred.py generates 5 recommended predictions with the current game streamed and the title of the stream as context using Langchain/OpenAi
+
 ## Getting Started
 
 ### Prerequisites
