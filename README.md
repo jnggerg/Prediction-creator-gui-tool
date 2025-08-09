@@ -1,12 +1,12 @@
 # Prediction Creator GUI Tool
 
-A simple Python project using a local SQLite database with FastAPI for Twitch streamers and moderators to make creating predictions easier to run and set up,
-with optional AI recommendations using Langchain/OpenAI.
+A simple Python project using a local SQLite database with FastAPI and tkinter GUI for Twitch streamers and moderators to make creating predictions easier to run and set up, with optional AI recommendations using Langchain/OpenAI.
 
 ## Getting Started
 
 ### Prerequisites
-- Install Python if not already installed
+- Install Python and Pip if not already installed
+- If using Linux / Mac, setup venv using `python3 -m venv venv`, then run `source venv/bin/activate`
 
 ### Setup Instructions
 
@@ -44,6 +44,6 @@ with optional AI recommendations using Langchain/OpenAI.
 - Save a list of predictions that you wish to run frequently
 - Start saved predictions with just a click
 - Get AI created Prediction recommendations
-- No need to manually type `/prediction` in chat
+- No need to manually type /prediction in chat
 - No need to repeatedly enter prediction details
 - Simple GUI interface for easy management using tkinter
