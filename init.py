@@ -109,14 +109,14 @@ def install_requirements(requirements_file="requirements.txt"):
         print(f"Failed to install dependencies: {e}")
         return False
 
-def update_env_file(client_id, client_secret, access_token, channel_name, broadcaster_id):
-    #set environment variables in .env 
+def update_env_file(client_id, client_secret, access_token, channel_name, broadcaster_id, OPENAI_API_KEY = ""):
     env_vars = {
         'TWITCH_CLIENT_ID': client_id,
         'TWITCH_CLIENT_SECRET': client_secret,
         'TWITCH_ACCESS_TOKEN': access_token,
         'TWITCH_CHANNEL_NAME': channel_name,
-        'TWITCH_BROADCASTER_ID': broadcaster_id
+        'TWITCH_BROADCASTER_ID': broadcaster_id,
+        'OPENAI_API_KEY': OPENAI_API_KEY
     }
     
     try:
@@ -130,6 +130,7 @@ def update_env_file(client_id, client_secret, access_token, channel_name, broadc
 
 
 if __name__ == "__main__":
+    
     #Installing modules
     install_success = install_requirements()
     if not install_success:
@@ -154,8 +155,15 @@ if __name__ == "__main__":
     
     client = TwitchAPI(client_id, client_secret, redirect, channel)
 
+
+    use_openai = input("Do you wish to use AI recommended Predicitons for currrently streamed game?: (y/n)").strip()
+    if use_openai.lower() == "y":
+        OpenAI_KEY = input("Enter you OpenAi API key: ").strip()
+        env_success = update_env_file(client_id, client_secret, client.token, channel, client.broadcaster_id, OpenAI_KEY)
+    else:
+        env_success = update_env_file(client_id, client_secret, client.token, channel, client.broadcaster_id)
+
     #creating .env
-    env_success = update_env_file(client_id, client_secret, client.token, channel, client.broadcaster_id)
     
     if env_success:
         print(".env updated successfully!")
