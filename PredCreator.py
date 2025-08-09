@@ -5,11 +5,14 @@ import os, time, threading, requests
 import uvicorn
 from dbServer import app
 from TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
+from GenerateAiPred import *
+
+'''
+This is the main GUI component of the program
+'''
 
 load_dotenv()
-CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
-TOKEN = os.getenv("TWITCH_ACCESS_TOKEN")
-BROADCASTER_ID = os.getenv("TWITCH_BROADCASTER_ID")
+use_ai = True if os.getenv("OPENAI_API_KEY") else False      #if openai key set, show AI recommend button
 DB_URL = "http://localhost:8000/templates"  # URL of the local database server
 
 def validate_prediction_data(title, options, duration) -> bool:
@@ -56,6 +59,7 @@ class PredictionGUI:
         select_pred_btn = Button(self.gui, text="Select from my predictions", command=self.SelectPredictions)
         select_pred_btn.pack(pady=10)
 
+        #handling current / last ran prediction buttons
         current_prediction = getCurrentPrediction()
         if not current_prediction:
             no_current_prediction = Label(self.gui, text="No Prediction running currently.\n Would like to rerun the previous one?")
@@ -86,9 +90,47 @@ class PredictionGUI:
                     EndPrediction(i)
                     self.refresh_gui()
 
+            def DeleteAndRefreshGUI():
+                DeletePrediction()
+                self.refresh_gui()
+
             for i,outcome in enumerate(outcomes):
                 outcome_button = Button(outcome_frame, text=outcome["title"],command=lambda i=i: EndAndRefreshGUI(i))
                 outcome_button.pack(side=tk.LEFT,padx=5)
+            
+            delete_button = Button(outcome_frame, text="Delete (refund points)", command =DeleteAndRefreshGUI)
+            delete_button.pack(side=tk.RIGHT,padx=5)
+
+        if use_ai:
+            reccommend_ai_predictions = Button(self.gui, text="Would you like to get Ai recommendations?", command=self.GenerateAIPrediction)
+            reccommend_ai_predictions.pack(pady=10)
+        
+    def GenerateAIPrediction(self):
+        def CreateAndRefreshGUI(title,options,duration = 90):
+            CreatePrediction(title,options,duration)
+            ai_window.destroy()
+            self.refresh_gui()
+
+        try:
+            predictions = GeneratePredictions()
+
+            if not predictions:
+                messagebox.showerror("Error:", "Couldnt generate recommended predictions")
+                return None
+            
+            ai_window = tk.Toplevel(self.gui)
+            ai_window.title("Generated Predictions")
+            ai_window.geometry("400x350")
+
+            for pred in predictions["data"]:
+                text = f"{pred["title"]}\n {" | ".join(pred["options"])}"
+                generated_pred_button = Button(ai_window, text=text, command=
+                lambda t=pred["title"], opts=pred["options"]: CreateAndRefreshGUI(t, opts))
+                generated_pred_button.pack(pady=5)
+
+        except Exception as e:
+            messagebox.showerror("Error", e)
+            return None
 
     def AddNewPrediction(self): #add new prediction to database
         add_window = tk.Toplevel(self.gui)
