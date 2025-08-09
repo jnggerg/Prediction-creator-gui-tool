@@ -116,7 +116,7 @@ def update_env_file(client_id, client_secret, access_token, channel_name, broadc
         'TWITCH_ACCESS_TOKEN': access_token,
         'TWITCH_CHANNEL_NAME': channel_name,
         'TWITCH_BROADCASTER_ID': broadcaster_id,
-        'OPENAI_API_KEY': OPENAI_API_KEY
+        'OPENAI_API_KEY': OPENAI_API_KEY,
     }
     
     try:
