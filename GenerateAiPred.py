@@ -78,7 +78,7 @@ def GetGameContext():
     game = stream_info["game_name"]
     template = f'''You are a video game expert. Analyze the game "{game}" and return the most commonly used context clues for Twitch streaming predictions.
 
-        List the details in this readable format (no JSON, no curly braces):
+        List the details in this readable format (no JSON, no curly braces) on the given game. Use the most up to date information available.:
 
         Game: {game}
         Mechanics:
