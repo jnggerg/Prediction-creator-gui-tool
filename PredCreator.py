@@ -54,14 +54,14 @@ class PredictionGUI:
         self.setup_widgets()
 
     def setup_widgets(self):
-        add_pred_btn = Button(self.gui, text="Add a new Prediction", command=self.AddNewPrediction)
+        add_pred_btn = Button(self.gui, text="Create a new Prediction", command=self.AddNewPrediction)
         add_pred_btn.pack(pady=10)
         select_pred_btn = Button(self.gui, text="Select from my predictions", command=self.SelectPredictions)
         select_pred_btn.pack(pady=10)
 
         #handling current / last ran prediction buttons
         current_prediction = getCurrentPrediction()
-        if not current_prediction:
+        if not current_prediction: #if no currently running prediction then display last ran prediction with option to re-run
             no_current_prediction = Label(self.gui, text="No Prediction running currently.\n Would like to rerun the previous one?")
             no_current_prediction.pack(pady=10)
             previous_prediction = getLastPrediction()
@@ -78,7 +78,7 @@ class PredictionGUI:
             prev_pred_button = Button(self.gui, text=button_text, command=lambda: StartAndRefreshGUI(t,o,d))
             prev_pred_button.pack(pady=5)
 
-        else:
+        else: # display running prediction with options to end / delete
             outcomes = current_prediction["outcomes"]
             text = f"Currently Running Prediction:\n Title: {current_prediction["title"]}"
             current_label = Label(self.gui, text=text)
@@ -133,7 +133,7 @@ class PredictionGUI:
             messagebox.showerror("Error", e)
             return None
 
-    def AddNewPrediction(self): #add new prediction to database
+    def AddNewPrediction(self): #adding a prediction to database / instantly running new one
         add_window = tk.Toplevel(self.gui)
         add_window.title("Add New Prediction")
         add_window.geometry("400x350")
@@ -265,6 +265,7 @@ class PredictionGUI:
             main_frame = tk.Frame(select_window)
             main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+            #scrollwheel
             canvas = tk.Canvas(main_frame)
             scrollbar = tk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
             
@@ -276,6 +277,32 @@ class PredictionGUI:
             scrollable_frame = tk.Frame(canvas)
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 
+
+            #seperate handling for linux and windows
+            def on_mousewheel(event):
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+            def on_mousewheel_Linux(event):
+                if event.num == 4:
+                    canvas.yview_scroll(-1,"units")
+                elif event.num == 5:
+                    canvas.yview_scroll(1, "units")
+
+            canvas.bind("<MouseWheel>", on_mousewheel)
+            canvas.bind("<Button-4>", on_mousewheel_Linux) #binding both windows and linux cases
+            canvas.bind("<Button-5>", on_mousewheel_Linux)
+
+
+            #handling focus, so that scrolling in the background wont scroll in the program
+            canvas.focus_set()
+            def on_enter(event):
+                canvas.focus_set()
+            def on_leave(event):
+                select_window.focus_set()
+            canvas.bind("<Enter>", on_enter)
+            canvas.bind("<Leave>", on_leave)
+
+
             def StartCloseRefreshGUI(title, outcomes, dur): #func only for button
                 CreatePrediction(title, outcomes, dur) 
                 select_window.destroy()
@@ -286,6 +313,7 @@ class PredictionGUI:
                     select_window.destroy()  #refreshes list
                     self.SelectPredictions()  
 
+            #listing all predictions from db
             for i, pred in enumerate(preds):
                 displayed_title = pred['title']
                 text = f"{displayed_title} \n {pred['option_a']} | {pred['option_b']}"
