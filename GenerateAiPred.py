@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, BaseOutputParser
+from langchain.schema import BaseOutputParser
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import os
