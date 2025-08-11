@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
@@ -29,9 +29,7 @@ class PredictionTemplate(Base):
     __tablename__ = "prediction_templates"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    option_a = Column(String, nullable=False)
-    option_b = Column(String, nullable=False)
-    option_c = Column(String, nullable=True)  # temp 3rd option, will need more possibly(?)     
+    options = Column(JSON, nullable=False) #storing all options in a single JSON col for easier management
     duration = Column(Integer, default=90)
 
 Base.metadata.create_all(bind=engine)
@@ -39,27 +37,34 @@ Base.metadata.create_all(bind=engine)
 #serverside input validation
 class TemplateCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=45)
-    option_a: str = Field(..., min_length=1, max_length=25)
-    option_b: str = Field(..., min_length=1, max_length=25) #lengths are determined by twitch
-    option_c: Optional[str] = Field(None, max_length=25)  # Optional third option
+    options : List[str] = Field(..., min_items=2, max_items=10)  #allowing up to 10 options
     duration: int = Field(90, ge=30, le=1800)  # Default 90 seconds, min 30, max 1800 sec
 
-    @field_validator("title", "option_a", "option_b", "option_c")
+    @field_validator("title")
     @classmethod
     def validate_strings(cls, v : str) -> str:
         if v is not None and not v.strip():
             raise ValueError("Field cannot be empty / only whitespace")
         return v.strip() if v else v
+    
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, v: List[str])-> List[str]:
+        cleaned_options = []
+        for option in v:
+            if not option.strip(): #no need to check option itself, .strip wont ever crash since were indexing List[str] only and it wont ever be None, just ""
+                raise ValueError("Field cannot be empty / only whitespace")
+            if len(option.strip()) > 25:
+                raise ValueError("Option length cannot exceed 25 characters") #twitch allows max 25 length
+            cleaned_options.append(option.strip()) 
+        return cleaned_options
 
 
-class TemplateResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)  #for sqlalchemy compatibility
-
+class TemplateResponse(BaseModel):#for sqlalchemy compatibility
+    model_config = ConfigDict(from_attributes=True)  
     id: int
     title: str
-    option_a: str
-    option_b: str
-    option_c: Optional[str] = None  
+    options: List[str]
     duration: int
 
 @app.get("/templates", response_model=List[TemplateResponse])
@@ -67,9 +72,9 @@ def get_templates():
     try:
         with get_db() as db:
             templates = db.query(PredictionTemplate).all()
-            return [TemplateResponse.model_validate(t) for t in templates]  #convert to dicts for response
+            return [TemplateResponse.model_validate(t) for t in templates]
     except HTTPException: 
-        raise #re-raise HTTP errors
+        raise #re-raise HTTP error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
