@@ -153,13 +153,13 @@ def DeletePrediction():
         }
         response = MakeAuthenticatedRequest("PATCH", url, params=params, timeout=10)
 
-        print(response.status_code, response.text)
+        print(response.status_code)
     except requests.exceptions.RequestException as e:
         messagebox.showerror("Error", f"Couldnt delete prediction: {e}")
 
 def EndPrediction(outcome: int= None): # choosing winning outcome
     try:
-        if outcome is None or outcome < 0 or outcome > 2:
+        if outcome is None or outcome < 0 or outcome > 9:
             print("No valid outcome given (0<outcome<4)")
             return
         
@@ -168,14 +168,12 @@ def EndPrediction(outcome: int= None): # choosing winning outcome
             print("No active prediction found")
             return
         
-        predid = current_pred["id"]
-        
         if outcome > len(current_pred["outcomes"]):
             print(f"Outcome {outcome} doesn't exist for this prediction")
             return
             
         winning_outcome_id = current_pred["outcomes"][outcome]["id"]
-
+        predid = current_pred["id"]
         params = {
             "broadcaster_id": BROADCASTER_ID,
             "id": predid,
@@ -184,7 +182,7 @@ def EndPrediction(outcome: int= None): # choosing winning outcome
         }
         response = MakeAuthenticatedRequest("PATCH", url, params=params, timeout=10)
 
-        print(f"Prediction ended {response.status_code}, {response.text}")
+        print(f"Prediction ended {response.status_code}")
     except requests.exceptions.RequestException as e:
         messagebox.showerror("Error", f"Couldnt delete prediction: {e}")
     

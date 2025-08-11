@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, Button, Label, Entry, ttk
 from dotenv import load_dotenv
-import os, time, threading, requests
+import os, time, threading, requests, json
 import uvicorn
 from dbServer import app
 from TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
@@ -15,7 +15,7 @@ load_dotenv()
 use_ai = True if os.getenv("OPENAI_API_KEY") else False      #if openai key set, show AI recommend button
 DB_URL = "http://localhost:8000/templates"  # URL of the local database server
 
-def validate_prediction_data(title, options, duration) -> bool:
+def validate_prediction_data(title: str, options: List[str], duration:int) -> bool:
     if not title or len(title) > 45:
         messagebox.showerror("Error", f"Title cannot be empty / exceeds 45 characters")
         return False
@@ -32,9 +32,7 @@ def validate_prediction_data(title, options, duration) -> bool:
             messagebox.showerror("Error", f"Each option must be between 1 and 25 characters")
             return False
     
-    if not duration:
-        duration = 90 #for validation only, wont get passed back
-    elif isinstance(duration, str) and not duration.isdigit() or int(duration) < 30 or int(duration) > 1800: #same as twitch api
+    if isinstance(duration, str) and not duration.isdigit() or int(duration) < 30 or int(duration) > 1800: #same as twitch api
         print("Duration must be an integer and between 30 and 1800 seconds")
         messagebox.showerror("Error", "Duration must be an integer and between 30 and 1800 seconds")
         return False
@@ -64,18 +62,18 @@ class PredictionGUI:
         if not current_prediction: #if no currently running prediction then display last ran prediction with option to re-run
             no_current_prediction = Label(self.gui, text="No Prediction running currently.\n Would like to rerun the previous one?")
             no_current_prediction.pack(pady=10)
+
             previous_prediction = getLastPrediction()
-            print(previous_prediction)
-            t,o,d = previous_prediction["title"], [x["title"] for x in previous_prediction["outcomes"]], previous_prediction["prediction_window"]
-            
-            display_outcomes = " | ".join(o)
-            button_text = f"{t} \n {display_outcomes}"
+            t,o,d = previous_prediction["title"],[o["title"] for o in previous_prediction["outcomes"]], previous_prediction["prediction_window"]
+            #truncating string and +"..." for readability if more chars in str than 60(optimal visual length for this window size)
+            text = f"{t}\n"
+            text = text + " | ".join(o)[:57] + f"{"..." if sum(len(s) for s in o) > 60 else ""}"
 
             def StartAndRefreshGUI(t,o,d):
-                    CreatePrediction(t, o, d) 
-                    self.refresh_gui()
+                CreatePrediction(t, o, d) 
+                self.refresh_gui()
 
-            prev_pred_button = Button(self.gui, text=button_text, command=lambda: StartAndRefreshGUI(t,o,d))
+            prev_pred_button = Button(self.gui, text=text, command=lambda: StartAndRefreshGUI(t,o,d))
             prev_pred_button.pack(pady=5)
 
         else: # display running prediction with options to end / delete
@@ -88,18 +86,18 @@ class PredictionGUI:
             outcome_frame.pack(padx=5)
 
             def EndAndRefreshGUI(i: int):
-                    EndPrediction(i)
-                    self.refresh_gui()
+                EndPrediction(i)
+                self.refresh_gui()
 
             def DeleteAndRefreshGUI():
                 DeletePrediction()
                 self.refresh_gui()
 
             for i,outcome in enumerate(outcomes):
-                outcome_button = Button(outcome_frame, text=outcome["title"],command=lambda i=i: EndAndRefreshGUI(i))
+                outcome_button = Button(outcome_frame, text=f"{i+1}",command=lambda i=i: EndAndRefreshGUI(i))
                 outcome_button.pack(side=tk.LEFT,padx=5)
             
-            delete_button = Button(outcome_frame, text="Delete (refund points)", command =DeleteAndRefreshGUI)
+            delete_button = Button(outcome_frame, text="DEL", command =DeleteAndRefreshGUI)
             delete_button.pack(side=tk.RIGHT,padx=5)
 
         if use_ai:
@@ -157,18 +155,17 @@ class PredictionGUI:
             try:
                 title = title_entry.get().strip()
                 duration = duration_entry.get().strip()
-                options = [opt.strip() for opt in options_entry.get().split(",")][:3] # max 3 options, rest ignored if more given
+                options = [opt.strip() for opt in options_entry.get().split(",")][:10] # max 10 options, rest ignored if more given
+
+                if not duration:
+                    duration = 90
 
                 if not validate_prediction_data(title, options, duration):
                     return  
                 
-                if not duration:
-                    duration = 90
                 prediction = {
                     "title": title,
-                    "option_a": options[0],
-                    "option_b": options[1],
-                    "option_c": options[2] if len(options) > 2 else None,
+                    "options": options, #converted to json by FastAPi automatically
                     "duration": int(duration)
                 }
 
@@ -187,8 +184,11 @@ class PredictionGUI:
 
         def StartPrediction():
             title = title_entry.get().strip()
-            options = [opt.strip() for opt in options_entry.get().strip().split(",")][:3]
+            options = [opt.strip() for opt in options_entry.get().strip().split(",")][:10]
             duration = duration_entry.get().strip()
+            if not duration:
+                duration = 90
+
             if not validate_prediction_data(title, options, duration):
                 return
             CreatePrediction(title, options, duration) #create prediction on twitch
@@ -197,24 +197,18 @@ class PredictionGUI:
 
         def StartAndSave():
             title = title_entry.get().strip()
-            options = [opt.strip() for opt in options_entry.get().strip().split(",")][:3]
+            options = [opt.strip() for opt in options_entry.get().strip().split(",")][:10]
             duration = duration_entry.get().strip()
-
-            if not validate_prediction_data(title, options, duration):
-                return
-
             if not duration:
                 duration = 90
-            CreatePrediction(title, options, duration) #create prediction on twitch
-
+                
             if not validate_prediction_data(title, options, duration):
-                    return  
+                return
+            CreatePrediction(title, options, duration) #create prediction on twitch
 
             prediction = {
                 "title": title,
-                "option_a": options[0],
-                "option_b": options[1],
-                "option_c": options[2] if len(options) > 2 else None,
+                "options": options,
                 "duration": int(duration)
             }
 
@@ -265,7 +259,6 @@ class PredictionGUI:
             main_frame = tk.Frame(select_window)
             main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-            #scrollwheel
             canvas = tk.Canvas(main_frame)
             scrollbar = tk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
             
@@ -278,7 +271,7 @@ class PredictionGUI:
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 
 
-            #seperate handling for linux and windows
+            #scrollwheel handling win and linux/mac
             def on_mousewheel(event):
                 canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
@@ -303,8 +296,8 @@ class PredictionGUI:
             canvas.bind("<Leave>", on_leave)
 
 
-            def StartCloseRefreshGUI(title, outcomes, dur): #func only for button
-                CreatePrediction(title, outcomes, dur) 
+            def StartCloseRefreshGUI(title, options, dur): #func only for button
+                CreatePrediction(title, options, dur) 
                 select_window.destroy()
                 self.refresh_gui()
 
@@ -316,13 +309,10 @@ class PredictionGUI:
             #listing all predictions from db
             for i, pred in enumerate(preds):
                 displayed_title = pred['title']
-                text = f"{displayed_title} \n {pred['option_a']} | {pred['option_b']}"
+                text = f"{displayed_title}\n"
+                options = pred['options']
 
-                options = [pred['option_a'], pred['option_b']]
-                if pred.get('option_c'):
-                    text += f" | {pred['option_c']}"
-                    options.append(pred['option_c'])
-
+                text = text + " | ".join(options)[:57] + f"{"..." if sum(len(s) for s in options) > 60 else ""}"
                 row_frame = tk.Frame(scrollable_frame)
                 row_frame.pack(fill='x', padx=10, pady=5)
 
