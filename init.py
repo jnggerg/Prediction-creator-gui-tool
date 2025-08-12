@@ -1,10 +1,10 @@
 import subprocess
 import sys, time
-import requests
 from pathlib import Path
 import webbrowser
 import urllib.parse
 import re
+import importlib
 
 '''
 Simple setup file for getting Twitch tokens and oauth, downloading dependencies
@@ -149,6 +149,7 @@ def install_requirements(requirements_file="requirements.txt"):
         print(f"Installing packages from {requirements_file}")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_file])
         print("Requirements installed.")
+        globals()["requests"] = importlib.import_module("requests") #Global import AFTER package install
         return True
     except subprocess.CalledProcessError as e:
         print(f"Failed to install dependencies: {e}")
