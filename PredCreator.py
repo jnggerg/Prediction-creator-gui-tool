@@ -342,5 +342,5 @@ if __name__ == "__main__":
     server_thread.start()
     time.sleep(1) #wait for server start
 
-    app = PredictionGUI()
-    app.start()
+    main_app = PredictionGUI()
+    main_app.start()
