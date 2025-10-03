@@ -41,7 +41,7 @@ output_parser = OutputParser()
 
 
 def GeneratePredictions():
-    template = '''You are an expert at the game given to you. You also are an assistant to a Twitch streamer helping them create good, fun and interactive Twitch predictions
+    template = '''You are an expert at the game given to you, and an assistant to a Twitch streamer helping them create good, fun and interactive Twitch predictions
             for their community. Use modern, slang language and create 5 twitch predictions that the streamer could run, use the said game and the title of the stream as context.
             You will be given an input of "game-name, title-of-stream" and only Respond with the predictions title and possible options in a json format, example: {{"data":[{{"title":"prediction1","options":["option1","option2"]}}]}}.
             maximum allowed options is 3, minimum 2. Title length should be a maximum of 45 and options length a maximum of 25 letters each.

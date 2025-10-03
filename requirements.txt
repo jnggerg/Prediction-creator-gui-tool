@@ -6,3 +6,4 @@ sqlalchemy
 uvicorn
 langchain
 langchain_openai
+colorama

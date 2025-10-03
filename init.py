@@ -4,13 +4,14 @@ from pathlib import Path
 import webbrowser
 import urllib.parse
 import re
+import requests
 import importlib
+import colorama
 
 '''
 Simple setup file for getting Twitch tokens and oauth, downloading dependencies
 and updating .env file.
 '''
-
 
 class TwitchAPI():
     def __init__(self, client_id, client_secret, redirect, channel):
@@ -38,29 +39,29 @@ class TwitchAPI():
         }
         
         url = f"{auth_url}?{urllib.parse.urlencode(params)}"
-        
-        print("Opening browser for Twitch authorization...")
+
+        print(colorama.Fore.GREEN + "Opening browser for Twitch authorization..." + colorama.Style.RESET_ALL)
         webbrowser.open(url)
-        
-        print("-"*50)
-        print(f"After authorizing, you'll be redirected to: {self.redirect}")
+
+        print(colorama.Fore.WHITE + "-"*50 + colorama.Style.RESET_ALL)
+        print(colorama.Fore.GREEN + f"After authorizing, you'll be redirected to: {self.redirect}")
         print("Copy the ENTIRE redirect URL and paste it here.")
-        print("Example: http://localhost:3000?code=abc123&scope=...")
+        print("Example: http://localhost:3000?code=abc123&scope=..." + colorama.Style.RESET_ALL)
         
         while True:
-            redirect_url = input("\nPaste the full redirect URL: ").strip()
+            redirect_url = input(colorama.Fore.GREEN + "\nPaste the full redirect URL: " + colorama.Style.RESET_ALL).strip()
             
             if not redirect_url:
-                print("Please enter a valid URL.")
+                print(colorama.Fore.RED + "Please enter a valid URL." + colorama.Style.RESET_ALL)
                 continue
                 
             code = self.extract_code_from_url(redirect_url)
             if code:
                 self.code = code
-                print("Successfully extracted authorization code")
+                print(colorama.Fore.GREEN + "Successfully extracted authorization code" + colorama.Style.RESET_ALL)
                 break
             else:
-                print("Could not extract authorization code from URL. Make sure you pasted the complete redirect URL without mistakes.")
+                print(colorama.Fore.RED + "Could not extract authorization code from URL. Make sure you pasted the complete redirect URL without mistakes." + colorama.Style.RESET_ALL)
                 continue
     
     def extract_code_from_url(self, url):
@@ -181,38 +182,38 @@ if __name__ == "__main__":
     #Installing modules
     install_success = install_requirements()
     if not install_success:
-        print("Couldnt install requirements. Please check the error above.")
+        print(colorama.Fore.RED + "Couldnt install requirements. Please check the error above." + colorama.Style.RESET_ALL)
     
-    print("-"*50)
+    print(colorama.Fore.WHITE + "-"*50 + colorama.Style.RESET_ALL)
     
     #getting twitch credentials
-    client_id = input("Enter your Twitch Client ID: ").strip()
+    client_id = input(colorama.Fore.GREEN + "Enter your Twitch Client ID: ").strip()
     client_secret = input("Enter you Twitch client secret:").strip()
     redirect = input("Enter your Twitch redirect URL:").strip()
-    channel = input("Enter the channel name to run the Tool on:").strip()
+    channel = input("Enter the channel name to run the Tool on:"+ colorama.Style.RESET_ALL).strip()
     
     if not client_id or not client_secret:
-        print("Client ID and Secret are required to run the program")
+        print(colorama.Fore.RED + "Client ID and Secret are required to run the program"+ colorama.Style.RESET_ALL)
         time.sleep(1)
         sys.exit()
     if not redirect or not channel:
-        print("A redirect URL and Twitch channel name are required to run the program")
+        print(colorama.Fore.RED + "A redirect URL and Twitch channel name are required to run the program" + colorama.Style.RESET_ALL)
         time.sleep(1)
         sys.exit()
-    
-    print("-"*50)
+
+    print(colorama.Fore.WHITE + "-"*50 + colorama.Style.RESET_ALL)
 
     #updating .env
     client = TwitchAPI(client_id, client_secret, redirect, channel)
 
-    use_openai = input("Do you wish to use AI recommended Predicitons for currrently streamed game?: (y/n)").strip()
+    use_openai = input(colorama.Fore.GREEN + "Do you wish to use AI recommended Predicitons for currrently streamed game?: (y/n)" + colorama.Style.RESET_ALL).strip()
     if use_openai.lower() == "y":
-        OpenAI_KEY = input("Enter you OpenAi API key: ").strip()
+        OpenAI_KEY = input(colorama.Fore.GREEN + "Enter you OpenAi API key: " + colorama.Style.RESET_ALL).strip()
         env_success = update_env_file(client_id, client_secret, client.token, client.refresh_token, channel, client.broadcaster_id, OpenAI_KEY)
     else:
         env_success = update_env_file(client_id, client_secret, client.token, channel, client.broadcaster_id)
 
     if env_success:
-        print(".env updated successfully!")
+        print(colorama.Fore.GREEN + ".env updated successfully!" + colorama.Style.RESET_ALL)
     else:
-        print("Setup failed")
+        print(colorama.Fore.RED + "Setup failed" + colorama.Style.RESET_ALL)

@@ -8,7 +8,7 @@ from TwitchApiHandler import *  #all interactions with Twitch API handled in sep
 from GenerateAiPred import *    #ai interaction handled here
 
 '''
-This is the main GUI component of the program, that
+This is the main GUI component of the program
 '''
 
 load_dotenv()

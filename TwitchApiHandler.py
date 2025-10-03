@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os, requests
 from typing import List
 from tkinter import messagebox
-import json
 from init import update_env_file
 
 '''
@@ -15,7 +14,6 @@ CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 TOKEN = os.getenv("TWITCH_ACCESS_TOKEN")
 REFRESH_TOKEN = os.getenv("TWITCH_REFRESH_TOKEN")
 BROADCASTER_ID, CHANNEL = os.getenv("TWITCH_BROADCASTER_ID"), os.getenv("TWITCH_CHANNEL_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 #global API header and url since all calls use the same endpoint
 headers = {
@@ -50,7 +48,7 @@ def refresh_access_token():
             if new_refresh_token:
                 REFRESH_TOKEN = new_refresh_token
             headers["Authorization"] = f"Bearer {TOKEN}"
-            update_env_file(CLIENT_ID,CLIENT_SECRET, TOKEN, REFRESH_TOKEN,CHANNEL, BROADCASTER_ID,OPENAI_API_KEY)
+            update_env_file(CLIENT_ID,CLIENT_SECRET, TOKEN, REFRESH_TOKEN,CHANNEL, BROADCASTER_ID)
             return True
         else:
             print("Error: No new access token returned")
