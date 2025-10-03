@@ -5,10 +5,10 @@ import os, time, threading, requests, json
 import uvicorn
 from dbServer import app
 from TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
-from GenerateAiPred import *    #ai interaction handled here
+from GenerateAiPred import *    #AI prediction generation handled here with LangChain, see GenerateAiPred.py
 
 '''
-This is the main GUI component of the program
+This is the main GUI component of the program, that also starts the database server on a seperate thread
 '''
 
 load_dotenv()
