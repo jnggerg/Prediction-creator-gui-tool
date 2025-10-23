@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Will the streamer reach 1000 followers this month?",
+    "options": [
+      "yes",
+      "no"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "tesgin",
+    "options": [
+      "1",
+      "2"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Testmaxxing",
+    "options": [
+      "123",
+      "123"
+    ]
+  }
+]

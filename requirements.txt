@@ -1,9 +1,6 @@
-requests
+httpx
 dotenv
 fastapi
-pydantic
-sqlalchemy
 uvicorn
 langchain
 langchain_openai
-colorama

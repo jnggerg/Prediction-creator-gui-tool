@@ -207,6 +207,7 @@ marimo/_lsp/
 __marimo__/
 
 #etc
-predictions.db
 todo.txt
 tempdata.json
+PredCreator.py
+/utils

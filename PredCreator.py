@@ -3,9 +3,9 @@ from tkinter import messagebox, Button, Label, Entry, ttk
 from dotenv import load_dotenv
 import os, time, threading, requests, json
 import uvicorn
-from dbServer import app
-from TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
-from GenerateAiPred import *    #AI prediction generation handled here with LangChain, see GenerateAiPred.py
+from utils.dbServer import app
+from utils.TwitchApiHandler import *  #all interactions with Twitch API handled in seperate file, see TwitchApiHandler.py
+from utils.GenerateAiPred import *    #AI prediction generation handled here with LangChain, see GenerateAiPred.py
 
 '''
 This is the main GUI component of the program, that also starts the database server on a seperate thread
@@ -13,7 +13,6 @@ This is the main GUI component of the program, that also starts the database ser
 
 load_dotenv()
 use_ai = True if os.getenv("OPENAI_API_KEY") else False      #if openai key set, show AI recommend button
-DB_URL = "http://localhost:8000/templates"  # URL of the local database server
 
 def validate_prediction_data(title: str, options: List[str], duration:int) -> bool:
     if not title or len(title) > 45:
