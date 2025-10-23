@@ -44,7 +44,7 @@ export default function MyPredictions() {
             {prediction.options && prediction.options.length > 0 && (
               <ul>
                 {prediction.options.map((option) => (
-                  <li key={option}>{option}</li>
+                  <li key={prediction.id}>{option}</li>
                 ))}
               </ul>
             )}

@@ -22,7 +22,7 @@ export default function MainMenu() {
       </div>
       <div>
         <p> Currently connected account:</p>
-        <button> Settings </button>
+        <button onClick={() => navigation("/Settings")}> Settings </button>
       </div>
     </main>
   );

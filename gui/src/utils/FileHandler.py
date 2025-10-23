@@ -14,6 +14,10 @@ Tauris built in read / write system was not flexible enough for this project,
 and i wanted to handle all the files in this directory, not through '/appdata/...' or '~/.local/share/...'
 '''
 
+BASE_DIR = Path(__file__).resolve().parent
+PREDICTIONS_FILE = BASE_DIR.parents[2] / "my_predictions.json"
+ENV_FILE = BASE_DIR.parents[2] / ".env"
+
 app = FastAPI()
 origins = ["http://localhost:1420"]
 app.add_middleware(
@@ -43,7 +47,7 @@ def save_prediction(new_prediction: dict) -> None:
 # returns all environment variables as dict
 @app.get('/env')
 def get_env_variables() -> dict:
-    load_dotenv()
+    load_dotenv(dotenv_path=ENV_FILE)
     env_vars = {key: value for key, value in os.environ.items()}
     return env_vars
 
