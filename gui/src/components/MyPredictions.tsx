@@ -48,7 +48,10 @@ export default function MyPredictions() {
                 ))}
               </ul>
             )}
-            <button type="button" onClick={handleStartPrediction(prediction)}>
+            <button
+              type="button"
+              onClick={() => handleStartPrediction(prediction)}
+            >
               DELETE
             </button>
             <button>START</button>
