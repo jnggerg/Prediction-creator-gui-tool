@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import {
   loadPredictions,
-  savePredictions,
+  savePrediction,
   Prediction,
 } from "../utils/JsonHandler";
 import { useEffect, useState, ChangeEvent, FormEvent, MouseEvent } from "react";
+import { useTwitchHandler } from "../utils/TwitchHandler";
 
 export default function CreatePrediction() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ export default function CreatePrediction() {
 
   function buildPredictionFromForm(): Prediction | null {
     const title = formValues.title.trim();
-    if (!title) {
-      console.warn("Cannot create prediction without a title");
+    if (!title || title.length < 3) {
+      console.error("Cannot create prediction with a title shorter than 3 chars");
       return null;
     }
 
@@ -33,9 +34,10 @@ export default function CreatePrediction() {
       .filter((option) => option.length > 0);
 
     if (options.length < 2) {
-      console.warn("A prediction requires at least two options");
+      console.error("A prediction requires at least two valid options");
       return null;
     }
+    const duration = formValues.duration
 
     return {
       //if any exist, use the last id + 1, else start at 1
@@ -43,6 +45,7 @@ export default function CreatePrediction() {
         predictions.length > 0 ? predictions[predictions.length - 1].id + 1 : 1,
       title,
       options,
+      duration: parseInt(duration) || 90, //default to 90 seconds if invalid
     };
   }
 
@@ -54,7 +57,7 @@ export default function CreatePrediction() {
 
     const updatedPredictions = [...predictions, nextPrediction];
     setPredictions(updatedPredictions);
-    await savePredictions(nextPrediction);
+    await savePrediction(nextPrediction);
     return nextPrediction;
   }
 
@@ -99,8 +102,11 @@ export default function CreatePrediction() {
     };
   }, []);
 
+  const { isReady, startPrediction } = useTwitchHandler();
+
   return (
     <div>
+      {!isReady && null}
       <button type="button" onClick={() => navigate(-1)}>
         {"<- "}
       </button>

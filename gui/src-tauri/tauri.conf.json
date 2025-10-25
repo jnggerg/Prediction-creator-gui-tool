@@ -10,8 +10,10 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
-
   "app": {
+    "security": {
+      "capabilities": ["fs-scope"]
+    },
     "windows": [
       {
         "title": "gui",

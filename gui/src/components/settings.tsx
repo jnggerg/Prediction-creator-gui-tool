@@ -1,15 +1,21 @@
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
+import { parseDotEnv, stringifyDotEnv } from "../utils/TwitchHandler";
+
 
 export function Settings() {
   const navigate = useNavigate();
 
   const [settings, setSettings] = useState({
-    twitchClientId: "",
-    twitchClientSecret: "",
-    twitchChannelName: "",
-    openAiApiKey: "",
+    TWITCH_CLIENT_ID: "",
+    TWITCH_CLIENT_SECRET: "",
+    TWITCH_CHANNEL_NAME: "",
+    OPENAI_API_KEY: "",
+    OAUTH_REDIRECT_URI: "",
+    TWITCH_ACCESS_TOKEN: "",
+    TWITCH_REFRESH_TOKEN: "",
+    TWITCH_BROADCASTER_ID: "",
   });
 
   useEffect(() => {
@@ -17,13 +23,17 @@ export function Settings() {
 
     async function loadEnv() {
       try {
-        const { data } = await axios.get("http://localhost:8999/env");
+        const data = parseDotEnv(await invoke<string>("read_file", { path: ".env" }));
         if (!cancelled) {
           setSettings({
-            twitchClientId: data.twitchClientId ?? "",
-            twitchClientSecret: data.twitchClientSecret ?? "",
-            twitchChannelName: data.twitchChannelName ?? "",
-            openAiApiKey: data.openAiApiKey ?? "",
+            TWITCH_CLIENT_ID: data.TWITCH_CLIENT_ID ?? "",
+            TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET ?? "",
+            TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME ?? "",
+            OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
+            OAUTH_REDIRECT_URI: data.OAUTH_REDIRECT_URI ?? "",
+            TWITCH_ACCESS_TOKEN: data.TWITCH_ACCESS_TOKEN ?? "",
+            TWITCH_REFRESH_TOKEN: data.TWITCH_REFRESH_TOKEN ?? "",
+            TWITCH_BROADCASTER_ID: data.TWITCH_BROADCASTER_ID ?? "",
           });
         }
       } catch (err) {
@@ -48,50 +58,47 @@ export function Settings() {
         <form
           onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
-            const form = e.currentTarget;
-            const formData = new FormData(form);
-            axios.post("http://localhost:8999/env", {
-              twitchClientId: (formData.get("twitchClientId") ?? "").toString(),
-              twitchClientSecret: (
-                formData.get("twitchClientSecret") ?? ""
-              ).toString(),
-              twitchChannelName: (
-                formData.get("twitchChannelName") ?? ""
-              ).toString(),
-              openAiApiKey: (formData.get("openAiApiKey") ?? "").toString(),
-            });
-          }}
-        >
+            const envText = stringifyDotEnv(settings);
+            invoke("write_file", { path: ".env", contents: envText });
+          }}>
           <input
             type="text"
             name="twitchClientId"
-            value={settings.twitchClientId}
+            value={settings.TWITCH_CLIENT_ID}
             onChange={(e) =>
-              setSettings({ ...settings, twitchClientId: e.target.value })
+              setSettings({ ...settings, TWITCH_CLIENT_ID: e.target.value })
             }
           />
           <input
             type="text"
             name="twitchClientSecret"
-            value={settings.twitchClientSecret}
+            value={settings.TWITCH_CLIENT_SECRET}
             onChange={(e) =>
-              setSettings({ ...settings, twitchClientSecret: e.target.value })
+              setSettings({ ...settings, TWITCH_CLIENT_SECRET: e.target.value })
             }
           />
           <input
             type="text"
             name="twitchChannelName"
-            value={settings.twitchChannelName}
+            value={settings.TWITCH_CHANNEL_NAME}
             onChange={(e) =>
-              setSettings({ ...settings, twitchChannelName: e.target.value })
+              setSettings({ ...settings, TWITCH_CHANNEL_NAME: e.target.value })
+            }
+          />
+          <input
+            type="text"
+            name="oauthRedirectUri"
+            value={settings.OAUTH_REDIRECT_URI}
+            onChange={(e) =>
+              setSettings({ ...settings, OAUTH_REDIRECT_URI: e.target.value })
             }
           />
           <input
             type="text"
             name="openAiApiKey"
-            value={settings.openAiApiKey}
+            value={settings.OPENAI_API_KEY}
             onChange={(e) =>
-              setSettings({ ...settings, openAiApiKey: e.target.value })
+              setSettings({ ...settings, OPENAI_API_KEY: e.target.value })
             }
           />
           <button type="submit">Save Settings</button>

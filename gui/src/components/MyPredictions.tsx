@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { loadPredictions, Prediction } from "../utils/JsonHandler";
 import { useEffect, useState } from "react";
-import { startPrediction } from "../utils/TwitchHandler";
+import { useTwitchHandler } from "../utils/TwitchHandler";
 
 export default function MyPredictions() {
   const navigate = useNavigate();
+  const { startPrediction } = useTwitchHandler();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  
 
   useEffect(() => {
     let isMounted = true;
@@ -26,10 +28,6 @@ export default function MyPredictions() {
     };
   }, []);
 
-  const handleStartPrediction = (prediction: Prediction) => {
-    startPrediction(prediction);
-  };
-
   return (
     <div>
       <button type="button" onClick={() => navigate(-1)}>
@@ -43,18 +41,18 @@ export default function MyPredictions() {
             <strong>{prediction.title}</strong>
             {prediction.options && prediction.options.length > 0 && (
               <ul>
-                {prediction.options.map((option) => (
-                  <li key={prediction.id}>{option}</li>
+                {prediction.options.map((option, idx) => (
+                  <li key={`${prediction.id}-${idx}`}>{option}</li>
                 ))}
               </ul>
             )}
             <button
               type="button"
-              onClick={() => handleStartPrediction(prediction)}
+              onClick={() => startPrediction(prediction)}
             >
-              DELETE
+              START
             </button>
-            <button>START</button>
+            <button>DELETE</button>
             <button>EDIT</button>
           </li>
         ))}
