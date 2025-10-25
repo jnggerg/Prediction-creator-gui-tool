@@ -1,6 +1,0 @@
-httpx
-dotenv
-fastapi
-uvicorn
-langchain
-langchain_openai
