@@ -30,7 +30,7 @@ export function Settings() {
             TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET ?? "",
             TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME ?? "",
             OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-            OAUTH_REDIRECT_URI: data.OAUTH_REDIRECT_URI ?? "",
+            OAUTH_REDIRECT_URI: "http://localhost:1420/oauth/callback",
             TWITCH_ACCESS_TOKEN: data.TWITCH_ACCESS_TOKEN ?? "",
             TWITCH_REFRESH_TOKEN: data.TWITCH_REFRESH_TOKEN ?? "",
             TWITCH_BROADCASTER_ID: data.TWITCH_BROADCASTER_ID ?? "",
@@ -61,6 +61,7 @@ export function Settings() {
             const envText = stringifyDotEnv(settings);
             invoke("write_file", { path: ".env", contents: envText });
           }}>
+          <p>Twitch Client ID</p>
           <input
             type="text"
             name="twitchClientId"
@@ -69,6 +70,7 @@ export function Settings() {
               setSettings({ ...settings, TWITCH_CLIENT_ID: e.target.value })
             }
           />
+          <p>Twitch Client Secret</p>
           <input
             type="text"
             name="twitchClientSecret"
@@ -77,6 +79,7 @@ export function Settings() {
               setSettings({ ...settings, TWITCH_CLIENT_SECRET: e.target.value })
             }
           />
+          <p>Twitch Channel Name</p>
           <input
             type="text"
             name="twitchChannelName"
@@ -85,14 +88,7 @@ export function Settings() {
               setSettings({ ...settings, TWITCH_CHANNEL_NAME: e.target.value })
             }
           />
-          <input
-            type="text"
-            name="oauthRedirectUri"
-            value={settings.OAUTH_REDIRECT_URI}
-            onChange={(e) =>
-              setSettings({ ...settings, OAUTH_REDIRECT_URI: e.target.value })
-            }
-          />
+          <p>Open Ai API key (OPTIONAL)</p>
           <input
             type="text"
             name="openAiApiKey"

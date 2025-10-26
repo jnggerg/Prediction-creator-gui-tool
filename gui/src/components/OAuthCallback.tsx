@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { parseDotEnv, stringifyDotEnv } from "../utils/TwitchHandler";
@@ -9,22 +9,40 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<Status>("processing");
   const [message, setMessage] = useState("Processing Twitch authorization…");
+  const processedRef = useRef(false);
 
   useEffect(() => {
+    // so react doesnt re-render and re-process the same auth code, resulting in an error
+    if (processedRef.current) {
+      return;
+    }
+    processedRef.current = true;
+
     let cancelled = false;
     let redirectTimeout: number | undefined;
 
     async function handleOAuthCallback() {
+
+      //extracting auth code and errors from Twitch from the returned URL
       const params = new URLSearchParams(window.location.search);
       const error = params.get("error");
       const code = params.get("code");
       const returnedState = params.get("state");
-      let storedState: string | null = null;
-      try {
-        storedState = window.localStorage.getItem("twitch_oauth_state");
-      } catch (err) {
-        console.warn("Failed to read stored Twitch OAuth state", err);
+      if (!error && !code) {
+        setStatus("error");
+        setMessage("No Twitch authorization data found in callback.");
+        return;
       }
+      let storedState: string | null = null;
+
+      //reading the stored state for csrf protection
+      try {
+        const diskState = await invoke<string>("read_file", { path: ".oauth_state" });
+        storedState = diskState.trim() || null;
+      } catch (err) {
+        console.warn("Failed to read stored Twitch OAuth state from disk", err);
+      }
+      
 
       if (error) {
         setStatus("error");
@@ -39,15 +57,17 @@ export default function OAuthCallback() {
       }
 
       if (!storedState || !returnedState || storedState !== returnedState) {
+        console.log(storedState, returnedState);
         setStatus("error");
         setMessage("Authorization state mismatch. Please retry the login.");
         return;
       }
 
+      //resetting state storage
       try {
-        window.localStorage.removeItem("twitch_oauth_state");
+        await invoke("write_file", { path: ".oauth_state", contents: "" });
       } catch (err) {
-        console.warn("Failed to clear stored Twitch OAuth state", err);
+        console.warn("Failed to clear stored Twitch OAuth state from disk", err);
       }
 
       try {

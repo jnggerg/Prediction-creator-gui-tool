@@ -38,30 +38,8 @@ const [settings, setSettings] = useState({
       try {
         const data = parseDotEnv(await invoke<string>("read_file", { path: ".env" }));
         if (!cancelled) {
-          // cannot start without these credentials
-          if(!data.TWITCH_CLIENT_ID || !data.TWITCH_CLIENT_SECRET || !data.TWITCH_CHANNEL_NAME || !data.OAUTH_REDIRECT_URI) {
-            console.error("Twitch credentials, channel, or redirect URI missing in .env file");
-            return;
-          }
-
           let accessToken = data.TWITCH_ACCESS_TOKEN?.trim() ?? "";
           let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
-
-          if (!accessToken || !refreshToken) {
-            console.log("Twitch access or refresh token missing, fetching new tokens");
-            const fetchedTokens = await getTwitchAccessTokens(
-              data.TWITCH_CLIENT_ID,
-              data.TWITCH_CLIENT_SECRET
-            );
-
-            if (fetchedTokens.length < 2) {
-              console.error("Failed to obtain Twitch access and refresh tokens");
-              return;
-            }
-
-            accessToken = fetchedTokens[0];
-            refreshToken = fetchedTokens[1];
-          }
 
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
           let broadcasterData : any = {};
@@ -72,7 +50,9 @@ const [settings, setSettings] = useState({
               data.TWITCH_CLIENT_SECRET,
               accessToken
             );
-            broadcasterId = broadcasterData.id;
+            broadcasterId = broadcasterData?.id ?? "";
+            console.log(broadcasterData);
+            console.log("Fetched broadcaster ID:", broadcasterId);
           }
 
           const nextSettings = {
@@ -80,7 +60,7 @@ const [settings, setSettings] = useState({
             TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
             TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
             OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-            OAUTH_REDIRECT_URI: data.OAUTH_REDIRECT_URI,
+            OAUTH_REDIRECT_URI: "http://localhost:1420/oauth/callback",
             TWITCH_ACCESS_TOKEN: accessToken,
             TWITCH_REFRESH_TOKEN: refreshToken,
             TWITCH_BROADCASTER_ID: broadcasterId,
@@ -104,11 +84,18 @@ const [settings, setSettings] = useState({
     };
   }, []);
 
-  const isReady =
+  //checking if the basic credentials are set
+  const credentialsReady =
     !!settings.TWITCH_CLIENT_ID &&
     !!settings.TWITCH_CLIENT_SECRET &&
     !!settings.TWITCH_CHANNEL_NAME &&
+    !!settings.OAUTH_REDIRECT_URI;
+
+  //checking if all tokens / broadcaster id is set
+  const isReady =
+    !!credentialsReady &&
     !!settings.TWITCH_ACCESS_TOKEN &&
+    !!settings.TWITCH_REFRESH_TOKEN &&
     !!settings.TWITCH_BROADCASTER_ID;
 
 
@@ -119,6 +106,10 @@ async function getBroadcasterData(
   client_secret: string,
   access_token: string
 ): Promise<any> {
+  if(!channelName || !client_id || !client_secret || !access_token) {
+    console.error("Missing parameters to get broadcaster data");
+    return {};
+  }
   try {
     const resp = await invoke<string>("get_user_id_cmd", {
       clientId: client_id,
@@ -127,29 +118,10 @@ async function getBroadcasterData(
       username: channelName,
     });
     const data = JSON.parse(resp);
-    return data.data[0] ?? "error";
+    return data.data[0] ?? {};
   } catch (err) {
     console.error("Failed to get broadcaster data:", err);
-    return "error";
-  }
-}
-
-async function getTwitchAccessTokens(
-  clientID: string,
-  clientSecret: string
-): Promise<Array<string>> {
-  try {
-    const response = await invoke<string>("get_twitch_tokens_cmd", {
-      clientId: clientID,
-      clientSecret: clientSecret,
-    });
-    const data = JSON.parse(response);
-    console.log("Obtained Twitch access token:", data);
-
-    return [data.access_token, data.refresh_token];
-  } catch (err) {
-    console.error("Failed to obtain Twitch access token:", err);
-    return [];
+    return {};
   }
 }
 
@@ -187,6 +159,7 @@ async function getCurrentPredictions() {
 }
 return {
   isReady,
+  credentialsReady,
   settings,
   startPrediction,
   endPrediction,
