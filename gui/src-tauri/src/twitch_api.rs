@@ -175,3 +175,42 @@ fn extract_access_token(payload: &str) -> Result<String, String> {
         .map(|s| s.to_owned())
         .ok_or_else(|| "Missing access_token in Twitch response".to_string())
 }
+
+pub async fn exchange_code_for_tokens(
+    code: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+) -> Result<String, String> {
+    let client = Client::new();
+
+    let params = [
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
+        ("code", code.as_str()),
+        ("grant_type", "authorization_code"),
+        ("redirect_uri", redirect_uri.as_str()),
+    ];
+
+    let response = client
+        .post("https://id.twitch.tv/oauth2/token")
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!(
+            "Twitch token exchange failed (status {}): {}",
+            status, body
+        ));
+    }
+
+    Ok(body)
+}

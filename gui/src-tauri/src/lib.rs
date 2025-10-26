@@ -45,13 +45,28 @@ async fn get_user_id_cmd(
     twitch_api::get_user_id(client_id, client_secret, access_token, username).await
 }
 
+#[tauri::command]
+async fn exchange_code_for_tokens_cmd(
+    code: String,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+) -> Result<String, String> {
+    twitch_api::exchange_code_for_tokens(code, client_id, client_secret, redirect_uri).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            write_file, read_file, create_twitch_prediction_cmd, get_twitch_tokens_cmd, get_user_id_cmd
+            write_file,
+            read_file,
+            create_twitch_prediction_cmd,
+            get_twitch_tokens_cmd,
+            get_user_id_cmd,
+            exchange_code_for_tokens_cmd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

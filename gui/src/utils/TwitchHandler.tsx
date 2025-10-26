@@ -43,20 +43,36 @@ const [settings, setSettings] = useState({
             console.error("Twitch credentials, channel, or redirect URI missing in .env file");
             return;
           }
-          //checking to see if valid tokens exist in env, else fetching new ones and replacing it in the settings
-          let tokens: Array<string> = [];
-          let tokensReturned = false;
-          if (!data.TWITCH_ACCESS_TOKEN || !data.TWITCH_REFRESH_TOKEN) {
+
+          let accessToken = data.TWITCH_ACCESS_TOKEN?.trim() ?? "";
+          let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
+
+          if (!accessToken || !refreshToken) {
             console.log("Twitch access or refresh token missing, fetching new tokens");
-            tokens = await getTwitchAccessTokens(
+            const fetchedTokens = await getTwitchAccessTokens(
               data.TWITCH_CLIENT_ID,
               data.TWITCH_CLIENT_SECRET
             );
-            tokensReturned = tokens.length === 0;
-            if (tokensReturned) {
+
+            if (fetchedTokens.length < 2) {
               console.error("Failed to obtain Twitch access and refresh tokens");
               return;
             }
+
+            accessToken = fetchedTokens[0];
+            refreshToken = fetchedTokens[1];
+          }
+
+          let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
+          let broadcasterData : any = {};
+          if (!broadcasterId && accessToken) {
+            broadcasterData = await getBroadcasterData(
+              data.TWITCH_CHANNEL_NAME,
+              data.TWITCH_CLIENT_ID,
+              data.TWITCH_CLIENT_SECRET,
+              accessToken
+            );
+            broadcasterId = broadcasterData.id;
           }
 
           const nextSettings = {
@@ -65,23 +81,9 @@ const [settings, setSettings] = useState({
             TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
             OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
             OAUTH_REDIRECT_URI: data.OAUTH_REDIRECT_URI,
-            TWITCH_ACCESS_TOKEN: tokensReturned ? data.TWITCH_ACCESS_TOKEN?.trim() : tokens[0],
-            TWITCH_REFRESH_TOKEN: tokensReturned ? data.TWITCH_REFRESH_TOKEN?.trim() : tokens[1],
-            TWITCH_BROADCASTER_ID:
-              data.TWITCH_BROADCASTER_ID?.trim() ??
-              (tokensReturned
-                ? await getBroadcasterId(
-                    data.TWITCH_CHANNEL_NAME,
-                    data.TWITCH_CLIENT_ID,
-                    data.TWITCH_CLIENT_SECRET,
-                    data.TWITCH_ACCESS_TOKEN
-                  )
-                : await getBroadcasterId(
-                    data.TWITCH_CHANNEL_NAME,
-                    data.TWITCH_CLIENT_ID,
-                    data.TWITCH_CLIENT_SECRET,
-                    tokens[0]
-                  )),
+            TWITCH_ACCESS_TOKEN: accessToken,
+            TWITCH_REFRESH_TOKEN: refreshToken,
+            TWITCH_BROADCASTER_ID: broadcasterId,
           };
 
             setSettings(nextSettings);
@@ -104,29 +106,31 @@ const [settings, setSettings] = useState({
 
   const isReady =
     !!settings.TWITCH_CLIENT_ID &&
+    !!settings.TWITCH_CLIENT_SECRET &&
+    !!settings.TWITCH_CHANNEL_NAME &&
     !!settings.TWITCH_ACCESS_TOKEN &&
     !!settings.TWITCH_BROADCASTER_ID;
 
 
 //since the rust backend handles the 401 token refresh, we need to pass the client secret and id along with every request to the backend
-async function getBroadcasterId(
+async function getBroadcasterData(
   channelName: string,
   client_id: string,
   client_secret: string,
   access_token: string
-): Promise<string> {
+): Promise<any> {
   try {
     const resp = await invoke<string>("get_user_id_cmd", {
-      client_id: client_id,
-      client_secret: client_secret,
-      access_token: access_token,
+      clientId: client_id,
+      clientSecret: client_secret,
+      accessToken: access_token,
       username: channelName,
     });
     const data = JSON.parse(resp);
-    return data.data[0]?.id ?? "";
+    return data.data[0] ?? "error";
   } catch (err) {
-    console.error("Failed to get broadcaster ID:", err);
-    return "";
+    console.error("Failed to get broadcaster data:", err);
+    return "error";
   }
 }
 
@@ -155,12 +159,12 @@ async function startPrediction(prediction: Prediction) {
   }
   try {
     const response = await invoke<string>("create_twitch_prediction_cmd", {
-      client_id: settings.TWITCH_CLIENT_ID,
-      client_secret: settings.TWITCH_CLIENT_SECRET,
-      access_token: settings.TWITCH_ACCESS_TOKEN,
+      clientId: settings.TWITCH_CLIENT_ID,
+      clientSecret: settings.TWITCH_CLIENT_SECRET,
+      accessToken: settings.TWITCH_ACCESS_TOKEN,
       title: prediction.title,
       outcomes: prediction.options,
-      prediction_window: prediction.duration,
+      predictionWindow: prediction.duration,
     });
     const data = JSON.parse(response);
 

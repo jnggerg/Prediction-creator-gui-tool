@@ -102,14 +102,11 @@ export default function CreatePrediction() {
     };
   }, []);
 
-  const { isReady, startPrediction } = useTwitchHandler();
+  
 
   return (
     <div>
-      {!isReady && null}
-      <button type="button" onClick={() => navigate(-1)}>
-        {"<- "}
-      </button>
+      <button onClick={() => navigate(-1)}>{ "<- "}</button>
       <h2>Create a New Prediction</h2>
       <form onSubmit={handleSave}>
         <label>
