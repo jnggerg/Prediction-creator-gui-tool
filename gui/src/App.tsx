@@ -10,7 +10,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainMenu />} />
+        <Route path="/" element={<MainMenu className="dark"/>} />
         <Route path="/CreatePrediction" element={<CreatePrediction />} />
         <Route path="/MyPredictions" element={<MyPredictions />} />
         <Route path="/Settings" element={<Settings />} />

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { loadPredictions, Prediction } from "../utils/JsonHandler";
+import { loadPredictions, deletePredictionById,Prediction } from "../utils/JsonHandler";
 import { useEffect, useState } from "react";
 import { useTwitchHandler } from "../utils/TwitchHandler";
 
@@ -52,7 +52,7 @@ export default function MyPredictions() {
             >
               START
             </button>
-            <button>DELETE</button>
+            <button onClick={() => {deletePredictionById(prediction.id); setPredictions(predictions.filter(p => p.id !== prediction.id));}}>DELETE</button>
             <button>EDIT</button>
           </li>
         ))}

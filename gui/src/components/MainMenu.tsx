@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTwitchHandler } from "../utils/TwitchHandler";
+import { Button } from "@/components/ui/button"
 
 export default function MainMenu() {
   const navigation = useNavigate();
@@ -44,13 +45,13 @@ export default function MainMenu() {
   //if credentials are missing, for user to go into settings and add them
   if (!credentialsReady) {
     return (
-      <div>
+      <div className="dark">
         <p>Loading Twitch credentials…</p>
         {showLoadingTimeout && (
           <div>
             <p>This is taking longer than expected. Please verify your Twitch credentials accordingly</p>
             <p> If you think everything is correct, and you followed the stetup, try restarting the app</p>
-            <button onClick={() => navigation("/Settings")}> Go to Settings </button>
+            <Button onClick={() => navigation("/Settings")}> Go to Settings </Button>
           </div>
         )}
       </div>
@@ -59,14 +60,14 @@ export default function MainMenu() {
 
   if(!isReady) {
     return (
-      <div>
+      <div className="dark">
         <p>Loading Twitch credentials…</p>
         {showLoadingTimeout && (
           <div>
             <p>Credentials are properly set, please connect your Twitch account to get started.</p>
-            <button onClick={() => handleTwitchAuth()}>
+            <Button onClick={() => handleTwitchAuth()}>
               Connect Twitch account
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -74,25 +75,25 @@ export default function MainMenu() {
   }
 
   return (
-    <main className="container">
+    <div className="dark bg-background text-foreground min-h-screen">
       <h1>Twitch Prediction Tool</h1>
       <div className="">
-        <button onClick={() => navigation("/CreatePrediction")}>
+        <Button onClick={() => navigation("/CreatePrediction")}>
           Create a new Prediction
-        </button>
+        </Button>
       </div>
       <div className="">
-        <button onClick={() => navigation("/MyPredictions")}>
+        <Button onClick={() => navigation("/MyPredictions")}>
           My Predictions
-        </button>
+        </Button>
       </div>
       <div>
         <p>{"Current Predictions:"}</p>
       </div>
       <div>
-        <p> Currently connected account: { settings.TWITCH_CHANNEL_NAME} </p>
-        <button onClick={() => navigation("/Settings")}> Settings </button>
+        <h2> Currently connected account: { settings.TWITCH_CHANNEL_NAME} </h2>
+        <Button onClick={() => navigation("/Settings")}> Settings </Button>
       </div>
-    </main>
+    </div>
   );
 }

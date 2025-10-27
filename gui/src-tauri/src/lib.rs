@@ -18,8 +18,10 @@ async fn create_twitch_prediction_cmd(
     title: String,
     outcomes: Vec<String>,
     prediction_window: u32,
+    broadcaster_id: String,
 ) -> Result<String, String> {
     let payload = twitch_api::TwitchPrediction {
+        broadcaster_id,
         title,
         outcomes,
         prediction_window,
@@ -27,12 +29,15 @@ async fn create_twitch_prediction_cmd(
     twitch_api::create_twitch_prediction(client_id, client_secret, access_token, payload).await
 }
 
+
+
 #[tauri::command]
 async fn get_twitch_tokens_cmd(
     client_id: String,
     client_secret: String,
+    refresh_token: Option<String>,
 ) -> Result<String, String> {
-    twitch_api::get_twitch_tokens(client_id, client_secret).await
+    twitch_api::get_twitch_tokens(client_id, client_secret, refresh_token).await
 }
 
 #[tauri::command]

@@ -42,6 +42,7 @@ const [settings, setSettings] = useState({
           let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
 
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
+          //storing full data for possible future use
           let broadcasterData : any = {};
           if (!broadcasterId && accessToken) {
             broadcasterData = await getBroadcasterData(
@@ -137,10 +138,11 @@ async function startPrediction(prediction: Prediction) {
       title: prediction.title,
       outcomes: prediction.options,
       predictionWindow: prediction.duration,
+      broadcaster_id: settings.TWITCH_BROADCASTER_ID,
     });
     const data = JSON.parse(response);
 
-    console.log("Started Twitch prediction:", data.data);
+    console.log("Started Twitch prediction:", data);
   } catch (err) {
     console.error("Failed to start Twitch prediction:", err);
   }

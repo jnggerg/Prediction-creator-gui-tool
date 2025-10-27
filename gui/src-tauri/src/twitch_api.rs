@@ -8,6 +8,7 @@ pub struct TwitchPrediction {
     pub title: String,
     pub outcomes: Vec<String>,
     pub prediction_window: u32,
+    pub broadcaster_id: String,
 }
 
 pub async fn send_with_refresh<F, Fut>(
@@ -67,7 +68,7 @@ pub async fn create_twitch_prediction(
                 let client_id = refresh_client_id.clone();
                 let client_secret = refresh_client_secret.clone();
                 async move {
-                    let refreshed = get_twitch_tokens(client_id, client_secret).await?;
+                    let refreshed = get_twitch_tokens(client_id, client_secret, None).await?;
                     let new_token = extract_access_token(&refreshed)?;
 
                     {
@@ -91,17 +92,31 @@ pub async fn create_twitch_prediction(
     Ok(body)
 }
 
-pub async fn get_twitch_tokens(client_id: String, client_secret: String) -> Result<String, String> {
+pub async fn get_twitch_tokens(
+    client_id: String,
+    client_secret: String,
+    refresh_token: Option<String>,
+) -> Result<String, String> {
     let client = Client::new();
 
-    let params = [
-        ("client_id", client_id.as_str()),
-        ("client_secret", client_secret.as_str()),
-        ("grant_type", "client_credentials"),
-    ];
+    let mut request = client.post("https://id.twitch.tv/oauth2/token");
 
-    let res = client.post("https://id.twitch.tv/oauth2/token")
-        .form(&params)
+    if let Some(refresh_token) = refresh_token {
+        request = request.form(&[
+            ("client_id", client_id.as_str()),
+            ("client_secret", client_secret.as_str()),
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh_token.as_str()),
+        ]);
+    } else {
+        request = request.form(&[
+            ("client_id", client_id.as_str()),
+            ("client_secret", client_secret.as_str()),
+            ("grant_type", "client_credentials"),
+        ]);
+    }
+
+    let res = request
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -143,7 +158,7 @@ pub async fn get_user_id(
                 let client_id = client_id_for_refresh.clone();
                 let client_secret = client_secret_for_refresh.clone();
                 async move {
-                    let refreshed = get_twitch_tokens(client_id, client_secret).await?;
+                    let refreshed = get_twitch_tokens(client_id, client_secret, None).await?;
                     let new_token = extract_access_token(&refreshed)?;
 
                     {
