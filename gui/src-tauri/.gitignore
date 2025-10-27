@@ -10,3 +10,4 @@
 .env
 .env.local
 .oauth_state
+my_predictions.json
