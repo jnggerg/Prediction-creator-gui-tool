@@ -1,6 +1,6 @@
 import { Prediction } from "./JsonHandler";
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function parseDotEnv(contents: string): Record<string, string> {
   return contents
@@ -19,7 +19,13 @@ export function stringifyDotEnv(values: Record<string, string>): string {
     .join("\n");
 }
 
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
 export function useTwitchHandler() {
+
 const [settings, setSettings] = useState({
     TWITCH_CLIENT_ID: "",
     TWITCH_CLIENT_SECRET: "",
@@ -31,6 +37,14 @@ const [settings, setSettings] = useState({
     TWITCH_BROADCASTER_ID: "",
   });
 
+const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+const [runningOrLastPrediction, setRunningPrediction] = useState<any>(null);
+const [streamerData, setStreamerData] = useState<any>({});
+
   useEffect(() => {
     let cancelled = false;
 
@@ -39,21 +53,35 @@ const [settings, setSettings] = useState({
         const data = parseDotEnv(await invoke<string>("read_file", { path: ".env" }));
         if (!cancelled) {
           let accessToken = data.TWITCH_ACCESS_TOKEN?.trim() ?? "";
-          let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
-
+          let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? ""; 
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
-          //storing full data for possible future use
-          let broadcasterData : any = {};
-          if (!broadcasterId && accessToken) {
-            broadcasterData = await getBroadcasterData(
-              data.TWITCH_CHANNEL_NAME,
-              data.TWITCH_CLIENT_ID,
-              data.TWITCH_CLIENT_SECRET,
-              accessToken
-            );
+          console.log("Loaded env data:", data);
+          
+          if (!accessToken || !refreshToken) {
+            console.log("Access or refresh token missing, skipping further setup");
+            const nextSettings = {
+              TWITCH_CLIENT_ID: data.TWITCH_CLIENT_ID ,
+              TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
+              TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
+              OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
+              OAUTH_REDIRECT_URI: "http://localhost:1420/oauth/callback",
+              TWITCH_ACCESS_TOKEN: accessToken,
+              TWITCH_REFRESH_TOKEN: refreshToken,
+              TWITCH_BROADCASTER_ID: broadcasterId,
+            };
+            settingsRef.current = nextSettings;
+            setSettings(nextSettings);
+            return;
+          }
+
+          // Fetch broadcaster ID if missing
+          if (!broadcasterId) {
+            const broadcasterData = await getBroadcasterData(data.TWITCH_CHANNEL_NAME, data.TWITCH_CLIENT_ID, accessToken);
             broadcasterId = broadcasterData?.id ?? "";
-            console.log(broadcasterData);
+            setStreamerData(broadcasterData);
             console.log("Fetched broadcaster ID:", broadcasterId);
+
+           
           }
 
           const nextSettings = {
@@ -66,12 +94,27 @@ const [settings, setSettings] = useState({
             TWITCH_REFRESH_TOKEN: refreshToken,
             TWITCH_BROADCASTER_ID: broadcasterId,
           };
+          settingsRef.current = { ...nextSettings, TWITCH_BROADCASTER_ID: broadcasterId };
 
-            setSettings(nextSettings);
-            await invoke("write_file", {
-              path: ".env",
-              contents: stringifyDotEnv(nextSettings),
-            });
+          const predictionData = await getLastPrediction(1,
+            nextSettings.TWITCH_CLIENT_ID,
+            nextSettings.TWITCH_ACCESS_TOKEN,
+            nextSettings.TWITCH_BROADCASTER_ID);
+
+          //if getLastPrediction updated tokens, persist them here, so we only write to disk once
+          nextSettings.TWITCH_ACCESS_TOKEN = settingsRef.current.TWITCH_ACCESS_TOKEN;
+          nextSettings.TWITCH_REFRESH_TOKEN = settingsRef.current.TWITCH_REFRESH_TOKEN;
+
+          if (predictionData) {
+            console.log("Fetched last prediction data:", predictionData);
+            setRunningPrediction(predictionData);
+          }
+
+          setSettings(nextSettings);
+          await invoke("write_file", {
+            path: ".env",
+            contents: stringifyDotEnv(nextSettings),
+          });
         }
       } catch (err) {
         console.error("Failed to load env", err);
@@ -89,8 +132,7 @@ const [settings, setSettings] = useState({
   const credentialsReady =
     !!settings.TWITCH_CLIENT_ID &&
     !!settings.TWITCH_CLIENT_SECRET &&
-    !!settings.TWITCH_CHANNEL_NAME &&
-    !!settings.OAUTH_REDIRECT_URI;
+    !!settings.TWITCH_CHANNEL_NAME;
 
   //checking if all tokens / broadcaster id is set
   const isReady =
@@ -100,26 +142,81 @@ const [settings, setSettings] = useState({
     !!settings.TWITCH_BROADCASTER_ID;
 
 
-//since the rust backend handles the 401 token refresh, we need to pass the client secret and id along with every request to the backend
+//wrapper function around invoke to detect 401 errors and refresh tokens, save to env and retry original request
+async function invokeWithRefresh(cmd: string, argsraw: Record<string, any>): Promise<any> {
+    const args = Object.fromEntries(
+      Object.entries(argsraw).map(([k, v]) => [k, Array.isArray(v) ? JSON.stringify(v) : String(v)])
+    );
+
+    console.log(cmd, args);
+    const raw = await invoke<string>(cmd, { args });
+    const result = JSON.parse(raw);
+    console.log("Twitch API response:", result);
+  
+    if (result?.status === 401) {
+      console.log("Access token expired, refreshing tokens");
+      const refreshResult = await invoke<TokenResponse>("refresh_tokens_cmd", {
+        args: {
+          "client_id": settingsRef.current.TWITCH_CLIENT_ID,
+          "client_secret": settingsRef.current.TWITCH_CLIENT_SECRET,
+          "refresh_token": settingsRef.current.TWITCH_REFRESH_TOKEN,
+        },
+      });
+      console.log(refreshResult);
+      try{
+        
+        const newAccessToken = refreshResult.access_token;
+        const newRefreshToken = refreshResult.refresh_token;
+        settingsRef.current = { ...settingsRef.current, TWITCH_ACCESS_TOKEN: newAccessToken, TWITCH_REFRESH_TOKEN: newRefreshToken };
+        setSettings({ ...settingsRef.current });
+
+        //retrying original request with new token
+        const retryArgs = { ...args, token: newAccessToken };
+        const retryRaw = await invoke<string>(cmd, { args: retryArgs });
+        return JSON.parse(retryRaw);
+      
+      } catch(e){
+        console.error("Failed to parse refresh token response:", e);
+        return result;
+      }
+    }
+    return result;
+}
+
+async function getLastPrediction(
+  amount: number,
+  client_id: string,
+  access_token: string,
+  broadcaster_id: string
+): Promise<any> { //any type used temporarily, since twitch apis prediction structure may differ
+  if(!amount || !client_id || !access_token || !broadcaster_id) {
+    console.error("Missing parameters to get last prediction");
+  }
+  const resp = await invokeWithRefresh("get_last_predictions_cmd", {
+    amount: amount,
+    client_id: client_id,
+    token: access_token,
+    broadcaster_id: broadcaster_id,
+  });
+  return resp;
+}
+
 async function getBroadcasterData(
   channelName: string,
   client_id: string,
-  client_secret: string,
   access_token: string
 ): Promise<any> {
-  if(!channelName || !client_id || !client_secret || !access_token) {
+  if(!channelName || !client_id || !access_token) {
     console.error("Missing parameters to get broadcaster data");
     return {};
-  }
+  } 
   try {
-    const resp = await invoke<string>("get_user_id_cmd", {
-      clientId: client_id,
-      clientSecret: client_secret,
-      accessToken: access_token,
+    const resp = await invokeWithRefresh("get_user_data_cmd", {
+      client_id: client_id,
+      token: access_token,
       username: channelName,
     });
-    const data = JSON.parse(resp);
-    return data.data[0] ?? {};
+    return resp.data[0] ?? {};
   } catch (err) {
     console.error("Failed to get broadcaster data:", err);
     return {};
@@ -127,22 +224,27 @@ async function getBroadcasterData(
 }
 
 async function startPrediction(prediction: Prediction) {
-  if (!prediction.duration) {
-    prediction.duration = 90; //default to 90 seconds
+  if (!prediction.prediction_window) {
+    prediction.prediction_window = 90; //default to 90 seconds
+  }
+  if (!prediction.outcomes || prediction.outcomes.length < 2) {
+    console.error("Prediction outcomes missing or too few!", prediction.outcomes);
+    return;
   }
   try {
-    const response = await invoke<string>("create_twitch_prediction_cmd", {
-      clientId: settings.TWITCH_CLIENT_ID,
-      clientSecret: settings.TWITCH_CLIENT_SECRET,
-      accessToken: settings.TWITCH_ACCESS_TOKEN,
+    console.log("Prediction outcomes before invoking:", prediction.outcomes);
+    const response = await invokeWithRefresh("create_twitch_prediction_cmd", {
+      client_id: settings.TWITCH_CLIENT_ID,
+      client_secret: settings.TWITCH_CLIENT_SECRET,
+      token: settings.TWITCH_ACCESS_TOKEN,
       title: prediction.title,
-      outcomes: prediction.options,
-      predictionWindow: prediction.duration,
+      outcomes: prediction.outcomes,
+      prediction_window: prediction.prediction_window,
       broadcaster_id: settings.TWITCH_BROADCASTER_ID,
     });
-    const data = JSON.parse(response);
 
-    console.log("Started Twitch prediction:", data);
+    //no need to parse again, invokeWithRefresh returnes parsed object
+    console.log("Started Twitch prediction:", response);
   } catch (err) {
     console.error("Failed to start Twitch prediction:", err);
   }
@@ -163,6 +265,8 @@ return {
   isReady,
   credentialsReady,
   settings,
+  streamerData,
+  runningOrLastPrediction,
   startPrediction,
   endPrediction,
   deletePrediction,

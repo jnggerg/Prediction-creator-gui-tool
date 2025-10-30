@@ -2,18 +2,18 @@ import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 
 export interface Prediction {
-  id: number;
+  id: string;
   title: string;
-  options: string[];
-  duration: number; // in seconds
+  outcomes: string[];
+  prediction_window: number; // in seconds
 }
 
 // data validation with zod
 export const PredictionSchema = z.object({
-  id: z.number().int(),
+  id: z.string().min(1),
   title: z.string().min(3).max(100),
-  options: z.array(z.string()).min(2).max(10),
-  duration: z.number().min(30),
+  outcomes: z.array(z.string()).min(1).max(10),
+  prediction_window: z.number().min(30).max(1800),
 });
 
 export async function loadPredictions(): Promise<Prediction[]> {
@@ -31,7 +31,7 @@ export async function loadPredictions(): Promise<Prediction[]> {
   }
 }
 
-export async function deletePredictionById(predictionId: number) {
+export async function deletePredictionById(predictionId: string) {
   try {
     const preds = await loadPredictions();
     const filteredPreds = preds.filter((pred) => pred.id !== predictionId);

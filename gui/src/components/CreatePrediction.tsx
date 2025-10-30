@@ -6,14 +6,19 @@ import {
 } from "../utils/JsonHandler";
 import { useEffect, useState, ChangeEvent, FormEvent, MouseEvent } from "react";
 import { useTwitchHandler } from "../utils/TwitchHandler";
+import { FieldGroup, Field, FieldSet, FieldLabel, FieldDescription  } from "@/components/ui/field"
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export default function CreatePrediction() {
+  const { startPrediction } = useTwitchHandler();
+
   const navigate = useNavigate();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [formValues, setFormValues] = useState({
     title: "",
-    options: "",
-    duration: "",
+    outcomes: "",
+    prediction_window: "",
   });
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -28,24 +33,22 @@ export default function CreatePrediction() {
       return null;
     }
 
-    const options = formValues.options
+    const outcomes = formValues.outcomes
       .split(",")
-      .map((option) => option.trim())
-      .filter((option) => option.length > 0);
+      .map((outcomes) => outcomes.trim())
+      .filter((outcomes) => outcomes.length > 0);
 
-    if (options.length < 2) {
-      console.error("A prediction requires at least two valid options");
+    if (outcomes.length < 2) {
+      console.error("A prediction requires at least two valid outcomes");
       return null;
     }
-    const duration = formValues.duration
+    const prediction_window = formValues.prediction_window
 
     return {
-      //if any exist, use the last id + 1, else start at 1
-      id:
-        predictions.length > 0 ? predictions[predictions.length - 1].id + 1 : 1,
+      id: window.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2),
       title,
-      options,
-      duration: parseInt(duration) || 90, //default to 90 seconds if invalid
+      outcomes,
+      prediction_window: parseInt(prediction_window) || 90, //default to 90 seconds if invalid
     };
   }
 
@@ -65,15 +68,16 @@ export default function CreatePrediction() {
     event.preventDefault();
     const created = await persistPrediction();
     if (created) {
-      setFormValues({ title: "", options: "", duration: "" }); //reset form
+      setFormValues({ title: "", outcomes: "", prediction_window: "" }); //reset form
     }
   }
 
   async function handleSaveAndStart(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     const created = await persistPrediction();
-    if (!created) {
-      return;
+    if (created) {
+      setFormValues({ title: "", outcomes: "", prediction_window: "" });
+      await startPrediction(created);
     }
 
     // TODO: Integrate with Twitch startPrediction API using `created`
@@ -105,56 +109,73 @@ export default function CreatePrediction() {
   
 
   return (
-    <div>
-      <button onClick={() => navigate(-1)}>{ "<- "}</button>
-      <h2>Create a New Prediction</h2>
+    <div className="dark bg-background text-foreground p-5">
+      <Button type="button" onClick={() => navigate(-1)}>
+        {"⮜ Back"}
+      </Button>
+      <div className="min-h-screen items-center justify-center space-y-5">
+      <h1>Create a New Prediction</h1>
       <form onSubmit={handleSave}>
-        <label>
-          Title:
-          <input
-            type="text"
-            name="title"
-            value={formValues.title}
-            onChange={handleInputChange}
-            required
-          />
-        </label>
+        <FieldGroup>
+          <FieldSet>
+          <Field>
+            <FieldLabel>Title:</FieldLabel>
+            <Input
+              type="text"
+              name="title"
+              value={formValues.title}
+              onChange={handleInputChange}
+              required
+            />
+            <FieldDescription>
+              The title should be between 3 and 45 characters.
+            </FieldDescription>
+          </Field>
         <br />
-        <label>
-          Options:
-          <input
+        <Field>
+          <FieldLabel>Options:</FieldLabel>
+          <Input
             type="text"
-            name="options"
-            value={formValues.options}
+            name="outcomes"
+            value={formValues.outcomes}
             onChange={handleInputChange}
           />
-        </label>
+          <FieldDescription>
+            Separate multiple options with commas, eg. "Option 1, Option 2, Option 3", maximum 10.
+          </FieldDescription>
+        </Field>
         <br />
-        <label>
-          Duration:
-          <input
+        <Field>
+          <FieldLabel>Duration:</FieldLabel>
+          <Input
             type="text"
-            name="duration"
-            value={formValues.duration}
+            name="prediction_window"
+            value={formValues.prediction_window}
             onChange={handleInputChange}
           />
-        </label>
+          <FieldDescription>
+            Duration in seconds, can be empty, default is 90. Value should be between 30 and 1800.
+          </FieldDescription>
+        </Field>
         <br />
         <div className="row">
-          <button type="button" onClick={handleSaveAndStart}>
+          <Button type="button" onClick={handleSaveAndStart}>
             Save and start
-          </button>
-          <button type="submit">Save</button>
-          <button
+          </Button>
+          <Button type="submit">Save</Button>
+          <Button
             type="button"
             onClick={() =>
               console.info("TODO: start without saving? implement logic")
             }
           >
             Start
-          </button>
+          </Button>
         </div>
+        </FieldSet>
+        </FieldGroup>
       </form>
+      </div>
     </div>
   );
 }

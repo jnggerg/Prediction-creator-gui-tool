@@ -76,11 +76,11 @@ export default function OAuthCallback() {
 
         const clientId = envData.TWITCH_CLIENT_ID?.trim();
         const clientSecret = envData.TWITCH_CLIENT_SECRET?.trim();
-        const redirectUri = envData.OAUTH_REDIRECT_URI?.trim();
+        const redirectUri = "http://localhost:1420/oauth/callback";
 
-        if (!clientId || !clientSecret || !redirectUri) {
+        if (!clientId || !clientSecret) {
           setStatus("error");
-          setMessage("Missing Twitch credentials or redirect URI in settings.");
+          setMessage("Missing Twitch credentials in settings.");
           return;
         }
 

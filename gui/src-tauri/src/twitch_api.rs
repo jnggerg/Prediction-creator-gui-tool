@@ -1,194 +1,176 @@
 use reqwest::Client;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
-use std::sync::{Arc, Mutex};
+use urlencoding::encode;
 
 #[derive(Serialize, Clone)]
 pub struct TwitchPrediction {
     pub title: String,
-    pub outcomes: Vec<String>,
+    pub outcomes: Vec<Outcome>,
     pub prediction_window: u32,
     pub broadcaster_id: String,
 }
 
-pub async fn send_with_refresh<F, Fut>(
-    client: &Client,
-    mut request_builder: F,
-    mut refresh_tokens: impl FnMut() -> Fut,
-) -> Result<reqwest::Response, String>
-where
-    F: FnMut(&Client) -> reqwest::RequestBuilder,
-    Fut: std::future::Future<Output = Result<(), String>>,
-{
-    let resp = request_builder(client).send().await.map_err(|e| e.to_string())?;
-    if resp.status() != reqwest::StatusCode::UNAUTHORIZED {
-        return Ok(resp);
-    }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TokenResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+}
 
-    refresh_tokens().await?;
-    request_builder(client)
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Outcome {
+    pub title: String,
+}
+
+/*
+Twitch API error response shape
+{  
+    "error": "<Error Type>",
+    "status": <HTTP status code>,
+    "message": "<Human-readable error message>"
+}
+Twitch API successful response shape
+{ 
+    "data": [...]
+}  
+
+*/
+
+
+
+pub async fn refresh_tokens(
+    client_id: String,
+    client_secret: String,
+    refresh_token: String,
+) -> Result<TokenResponse, String> {
+    let encoded_refresh_token = encode(&refresh_token);
+    let payload = [
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
+        ("grant_type", "refresh_token"),
+        ("refresh_token", encoded_refresh_token.as_ref()),
+    ];
+    let client = Client::new();
+    let response = client
+        .post("https://id.twitch.tv/oauth2/token")
+        .form(&payload)
         .send()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    if !status.is_success() {
+        return Err(text.to_string());
+    }
+    let tokens: TokenResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+
+    Ok(tokens)
 }
 
 
 pub async fn create_twitch_prediction(
     client_id: String,
-    client_secret: String,
     access_token: String,
     prediction: TwitchPrediction,
 ) -> Result<String, String> {
     let client = Client::new();
-    let token_store = Arc::new(Mutex::new(access_token));
-    let prediction = Arc::new(prediction);
 
-    let request_token = Arc::clone(&token_store);
-    let request_prediction = Arc::clone(&prediction);
-    let client_id_clone = client_id.clone();
-    let refresh_token_store = Arc::clone(&token_store);
-
-    let response = send_with_refresh(
-        &client,
-        move |client: &Client| {
-            let token_guard = request_token
-                .lock()
-                .expect("token mutex poisoned");
-            client
-                .post("https://api.twitch.tv/helix/predictions")
-                .header("Client-ID", client_id_clone.clone())
-                .bearer_auth(token_guard.as_str())
-                .json(&*request_prediction)
-        },
-        {
-            let refresh_client_id = client_id.clone();
-            let refresh_client_secret = client_secret.clone();
-            move || {
-                let token_store = Arc::clone(&refresh_token_store);
-                let client_id = refresh_client_id.clone();
-                let client_secret = refresh_client_secret.clone();
-                async move {
-                    let refreshed = get_twitch_tokens(client_id, client_secret, None).await?;
-                    let new_token = extract_access_token(&refreshed)?;
-
-                    {
-                        let mut token = token_store
-                            .lock()
-                            .map_err(|e| e.to_string())?;
-                        *token = new_token.clone();
-                    }
-
-                    Ok(())
-                }
-            }
-        },
-    )
-    .await?;
-
-    let body = response
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(body)
-}
-
-pub async fn get_twitch_tokens(
-    client_id: String,
-    client_secret: String,
-    refresh_token: Option<String>,
-) -> Result<String, String> {
-    let client = Client::new();
-
-    let mut request = client.post("https://id.twitch.tv/oauth2/token");
-
-    if let Some(refresh_token) = refresh_token {
-        request = request.form(&[
-            ("client_id", client_id.as_str()),
-            ("client_secret", client_secret.as_str()),
-            ("grant_type", "refresh_token"),
-            ("refresh_token", refresh_token.as_str()),
-        ]);
-    } else {
-        request = request.form(&[
-            ("client_id", client_id.as_str()),
-            ("client_secret", client_secret.as_str()),
-            ("grant_type", "client_credentials"),
-        ]);
-    }
-
-    let res = request
+    let response = client
+        .post("https://api.twitch.tv/helix/predictions")
+        .header("Client-ID", client_id.as_str())
+        .bearer_auth(access_token.as_str())
+        .json(&prediction)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(res.text().await.unwrap_or_default())
-}
 
-pub async fn get_user_id(
-    client_id: String,
-    client_secret: String,
-    access_token: String,
-    username: String,
-) -> Result<String, String> {
-    let client = Client::new();
-    let token_store = Arc::new(Mutex::new(access_token));
-    let request_token_store = Arc::clone(&token_store);
-    let refresh_token_store = Arc::clone(&token_store);
-    let client_id_clone = client_id.clone();
-    let client_id_for_refresh = client_id.clone();
-    let client_secret_for_refresh = client_secret.clone();
-    let username_arc = Arc::new(username);
-    let username_for_req = Arc::clone(&username_arc);
-
-    let response = send_with_refresh(
-        &client,
-        move |client: &Client| {
-            let token_guard = request_token_store
-                .lock()
-                .expect("token mutex poisoned");
-            client
-                .get("https://api.twitch.tv/helix/users")
-                .header("Client-ID", client_id_clone.clone())
-                .bearer_auth(token_guard.as_str())
-                .query(&[("login", username_for_req.as_ref().as_str())])
-        },
-        {
-            move || {
-                let token_store = Arc::clone(&refresh_token_store);
-                let client_id = client_id_for_refresh.clone();
-                let client_secret = client_secret_for_refresh.clone();
-                async move {
-                    let refreshed = get_twitch_tokens(client_id, client_secret, None).await?;
-                    let new_token = extract_access_token(&refreshed)?;
-
-                    {
-                        let mut token = token_store
-                            .lock()
-                            .map_err(|e| e.to_string())?;
-                        *token = new_token.clone();
-                    }
-
-                    Ok(())
-                }
-            }
-        },
-    )
-    .await?;
-
+    let status = response.status();
     let body = response
         .text()
         .await
         .map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(body);
+    }
     Ok(body)
 }
 
-fn extract_access_token(payload: &str) -> Result<String, String> {
-    let value: Value = serde_json::from_str(payload).map_err(|e| e.to_string())?;
-    value
-        .get("access_token")
-        .and_then(Value::as_str)
-        .map(|s| s.to_owned())
-        .ok_or_else(|| "Missing access_token in Twitch response".to_string())
+pub async fn get_user_data(
+    client_id: String,
+    access_token: String,
+    username: String,
+) -> Result<String, String> {
+    let client = Client::new();
+
+    let response = client
+        .get("https://api.twitch.tv/helix/users")
+        .header("Client-ID", client_id.as_str())
+        .bearer_auth(access_token.as_str())
+        .query(&[("login", username.as_str())])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(body);
+    }
+    Ok(body)
+}
+
+
+pub async fn get_last_predictions(
+    amount: u32,
+    client_id: String,
+    token: String,
+    broadcaster_id: String,
+) -> Result<String, String> {
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get("https://api.twitch.tv/helix/predictions")
+        .bearer_auth(token)
+        .header("Client-Id", client_id)
+        .query(&[("broadcaster_id", broadcaster_id.as_str())])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status(); 
+
+    // returning the 401 as an Ok(), so that we can refresh token without triggering the catch block
+    if status == 401 { 
+        return Ok(response.text().await.map_err(|e| e.to_string())?.to_string());
+    }
+    if !status.is_success() {
+        return Err(response.text().await.map_err(|e| e.to_string())?.to_string());
+    }
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    let data: Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    
+    // parse data into array
+    let predictions_vec = data.get("data")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+
+    let first_n: Vec<Value> = predictions_vec.into_iter().take(amount as usize).collect();
+
+    if first_n.is_empty() { // ensure that the returned Err() is also structured as a JSON so parsing wont break
+        return Err("{\"error\": \"No predictions found, returned vector is empty.\"}".to_string());
+    }
+
+    // Convert back to JSON string
+    Ok(serde_json::to_string(&first_n).map_err(|e| e.to_string())?)
 }
 
 pub async fn exchange_code_for_tokens(
@@ -221,10 +203,7 @@ pub async fn exchange_code_for_tokens(
         .map_err(|e| e.to_string())?;
 
     if !status.is_success() {
-        return Err(format!(
-            "Twitch token exchange failed (status {}): {}",
-            status, body
-        ));
+        return Err(body.to_string());
     }
 
     Ok(body)

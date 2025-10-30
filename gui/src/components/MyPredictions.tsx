@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { loadPredictions, deletePredictionById,Prediction } from "../utils/JsonHandler";
 import { useEffect, useState } from "react";
 import { useTwitchHandler } from "../utils/TwitchHandler";
+import { Button } from "@/components/ui/button"
 
 export default function MyPredictions() {
   const navigate = useNavigate();
@@ -29,34 +30,36 @@ export default function MyPredictions() {
   }, []);
 
   return (
-    <div>
-      <button type="button" onClick={() => navigate(-1)}>
-        {"<- "}
-      </button>
+    <div className="dark bg-background text-foreground p-5">
+      <Button type="button" onClick={() => navigate(-1)}>
+        {"⮜ Back"}
+      </Button> 
+      <div className="min-h-screen w-full max-w-md mx-auto flex flex-col items-center space-y-5">
       <h1>My Predictions</h1>
       <ul>
         {predictions.length === 0 && <li>No predictions found.</li>}
         {predictions.map((prediction) => (
-          <li key={prediction.id}>
+          <li key={prediction.id} className="mb-4 p-4 border rounded-lg shadow">
             <strong>{prediction.title}</strong>
-            {prediction.options && prediction.options.length > 0 && (
+            {prediction.outcomes && prediction.outcomes.length > 0 && (
               <ul>
-                {prediction.options.map((option, idx) => (
-                  <li key={`${prediction.id}-${idx}`}>{option}</li>
+                {prediction.outcomes.map((outcome, idx) => (
+                  <li key={`${prediction.id}-${idx}`}>{outcome}</li>
                 ))}
               </ul>
             )}
-            <button
+            <Button
               type="button"
               onClick={() => startPrediction(prediction)}
             >
               START
-            </button>
-            <button onClick={() => {deletePredictionById(prediction.id); setPredictions(predictions.filter(p => p.id !== prediction.id));}}>DELETE</button>
-            <button>EDIT</button>
+            </Button>
+            <Button onClick={() => {deletePredictionById(prediction.id); setPredictions(predictions.filter(p => p.id !== prediction.id));}}>DELETE</Button>
+            <Button>EDIT</Button>
           </li>
-        ))}
+        ))}   
       </ul>
+      </div>
     </div>
   );
 }
