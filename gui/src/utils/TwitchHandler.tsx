@@ -25,8 +25,7 @@ interface TokenResponse {
 }
 
 export function useTwitchHandler() {
-
-const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState({
     TWITCH_CLIENT_ID: "",
     TWITCH_CLIENT_SECRET: "",
     TWITCH_CHANNEL_NAME: "",
@@ -37,30 +36,34 @@ const [settings, setSettings] = useState({
     TWITCH_BROADCASTER_ID: "",
   });
 
-const settingsRef = useRef(settings);
+  const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
 
-const [runningOrLastPrediction, setRunningPrediction] = useState<any>(null);
-const [streamerData, setStreamerData] = useState<any>({});
+  const [runningOrLastPrediction, setRunningPrediction] = useState<any>(null);
+  const [streamerData, setStreamerData] = useState<any>({});
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadEnv() {
       try {
-        const data = parseDotEnv(await invoke<string>("read_file", { path: ".env" }));
+        const data = parseDotEnv(
+          await invoke<string>("read_file", { path: ".env" })
+        );
         if (!cancelled) {
           let accessToken = data.TWITCH_ACCESS_TOKEN?.trim() ?? "";
-          let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? ""; 
+          let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
           console.log("Loaded env data:", data);
-          
+
           if (!accessToken || !refreshToken) {
-            console.log("Access or refresh token missing, skipping further setup");
+            console.log(
+              "Access or refresh token missing, skipping further setup"
+            );
             const nextSettings = {
-              TWITCH_CLIENT_ID: data.TWITCH_CLIENT_ID ,
+              TWITCH_CLIENT_ID: data.TWITCH_CLIENT_ID,
               TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
               TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
               OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
@@ -76,12 +79,14 @@ const [streamerData, setStreamerData] = useState<any>({});
 
           // Fetch broadcaster ID if missing
           if (!broadcasterId) {
-            const broadcasterData = await getBroadcasterData(data.TWITCH_CHANNEL_NAME, data.TWITCH_CLIENT_ID, accessToken);
+            const broadcasterData = await getBroadcasterData(
+              data.TWITCH_CHANNEL_NAME,
+              data.TWITCH_CLIENT_ID,
+              accessToken
+            );
             broadcasterId = broadcasterData?.id ?? "";
             setStreamerData(broadcasterData);
             console.log("Fetched broadcaster ID:", broadcasterId);
-
-           
           }
 
           const nextSettings = {
@@ -94,16 +99,23 @@ const [streamerData, setStreamerData] = useState<any>({});
             TWITCH_REFRESH_TOKEN: refreshToken,
             TWITCH_BROADCASTER_ID: broadcasterId,
           };
-          settingsRef.current = { ...nextSettings, TWITCH_BROADCASTER_ID: broadcasterId };
+          settingsRef.current = {
+            ...nextSettings,
+            TWITCH_BROADCASTER_ID: broadcasterId,
+          };
 
-          const predictionData = await getLastPrediction(1,
+          const predictionData = await getLastPrediction(
+            1,
             nextSettings.TWITCH_CLIENT_ID,
             nextSettings.TWITCH_ACCESS_TOKEN,
-            nextSettings.TWITCH_BROADCASTER_ID);
+            nextSettings.TWITCH_BROADCASTER_ID
+          );
 
           //if getLastPrediction updated tokens, persist them here, so we only write to disk once
-          nextSettings.TWITCH_ACCESS_TOKEN = settingsRef.current.TWITCH_ACCESS_TOKEN;
-          nextSettings.TWITCH_REFRESH_TOKEN = settingsRef.current.TWITCH_REFRESH_TOKEN;
+          nextSettings.TWITCH_ACCESS_TOKEN =
+            settingsRef.current.TWITCH_ACCESS_TOKEN;
+          nextSettings.TWITCH_REFRESH_TOKEN =
+            settingsRef.current.TWITCH_REFRESH_TOKEN;
 
           if (predictionData) {
             console.log("Fetched last prediction data:", predictionData);
@@ -122,7 +134,7 @@ const [streamerData, setStreamerData] = useState<any>({});
     }
 
     loadEnv();
-    
+
     return () => {
       cancelled = true;
     };
@@ -141,135 +153,147 @@ const [streamerData, setStreamerData] = useState<any>({});
     !!settings.TWITCH_REFRESH_TOKEN &&
     !!settings.TWITCH_BROADCASTER_ID;
 
-
-//wrapper function around invoke to detect 401 errors and refresh tokens, save to env and retry original request
-async function invokeWithRefresh(cmd: string, argsraw: Record<string, any>): Promise<any> {
+  //wrapper function around invoke to detect 401 errors and refresh tokens, save to env and retry original request
+  async function invokeWithRefresh(
+    cmd: string,
+    argsraw: Record<string, any>
+  ): Promise<any> {
     const args = Object.fromEntries(
-      Object.entries(argsraw).map(([k, v]) => [k, Array.isArray(v) ? JSON.stringify(v) : String(v)])
+      Object.entries(argsraw).map(([k, v]) => [
+        k,
+        Array.isArray(v) ? JSON.stringify(v) : String(v),
+      ])
     );
 
     console.log(cmd, args);
     const raw = await invoke<string>(cmd, { args });
     const result = JSON.parse(raw);
     console.log("Twitch API response:", result);
-  
+
     if (result?.status === 401) {
       console.log("Access token expired, refreshing tokens");
       const refreshResult = await invoke<TokenResponse>("refresh_tokens_cmd", {
         args: {
-          "client_id": settingsRef.current.TWITCH_CLIENT_ID,
-          "client_secret": settingsRef.current.TWITCH_CLIENT_SECRET,
-          "refresh_token": settingsRef.current.TWITCH_REFRESH_TOKEN,
+          client_id: settingsRef.current.TWITCH_CLIENT_ID,
+          client_secret: settingsRef.current.TWITCH_CLIENT_SECRET,
+          refresh_token: settingsRef.current.TWITCH_REFRESH_TOKEN,
         },
       });
       console.log(refreshResult);
-      try{
-        
+      try {
         const newAccessToken = refreshResult.access_token;
         const newRefreshToken = refreshResult.refresh_token;
-        settingsRef.current = { ...settingsRef.current, TWITCH_ACCESS_TOKEN: newAccessToken, TWITCH_REFRESH_TOKEN: newRefreshToken };
+        settingsRef.current = {
+          ...settingsRef.current,
+          TWITCH_ACCESS_TOKEN: newAccessToken,
+          TWITCH_REFRESH_TOKEN: newRefreshToken,
+        };
         setSettings({ ...settingsRef.current });
 
         //retrying original request with new token
         const retryArgs = { ...args, token: newAccessToken };
         const retryRaw = await invoke<string>(cmd, { args: retryArgs });
         return JSON.parse(retryRaw);
-      
-      } catch(e){
+      } catch (e) {
         console.error("Failed to parse refresh token response:", e);
         return result;
       }
     }
     return result;
-}
-
-async function getLastPrediction(
-  amount: number,
-  client_id: string,
-  access_token: string,
-  broadcaster_id: string
-): Promise<any> { //any type used temporarily, since twitch apis prediction structure may differ
-  if(!amount || !client_id || !access_token || !broadcaster_id) {
-    console.error("Missing parameters to get last prediction");
   }
-  const resp = await invokeWithRefresh("get_last_predictions_cmd", {
-    amount: amount,
-    client_id: client_id,
-    token: access_token,
-    broadcaster_id: broadcaster_id,
-  });
-  return resp;
-}
 
-async function getBroadcasterData(
-  channelName: string,
-  client_id: string,
-  access_token: string
-): Promise<any> {
-  if(!channelName || !client_id || !access_token) {
-    console.error("Missing parameters to get broadcaster data");
-    return {};
-  } 
-  try {
-    const resp = await invokeWithRefresh("get_user_data_cmd", {
+  async function getLastPrediction(
+    amount: number,
+    client_id: string,
+    access_token: string,
+    broadcaster_id: string
+  ): Promise<any> {
+    //any type used temporarily, since twitch apis prediction structure may differ
+    if (!amount || !client_id || !access_token || !broadcaster_id) {
+      console.error("Missing parameters to get last prediction");
+    }
+    const resp = await invokeWithRefresh("get_last_predictions_cmd", {
+      amount: amount,
       client_id: client_id,
       token: access_token,
-      username: channelName,
+      broadcaster_id: broadcaster_id,
     });
-    return resp.data[0] ?? {};
-  } catch (err) {
-    console.error("Failed to get broadcaster data:", err);
-    return {};
+    return resp;
   }
-}
 
-async function startPrediction(prediction: Prediction) {
-  if (!prediction.prediction_window) {
-    prediction.prediction_window = 90; //default to 90 seconds
+  async function getBroadcasterData(
+    channelName: string,
+    client_id: string,
+    access_token: string
+  ): Promise<any> {
+    if (!channelName || !client_id || !access_token) {
+      console.error("Missing parameters to get broadcaster data");
+      return {};
+    }
+    try {
+      const resp = await invokeWithRefresh("get_user_data_cmd", {
+        client_id: client_id,
+        token: access_token,
+        username: channelName,
+      });
+      return resp.data[0] ?? {};
+    } catch (err) {
+      console.error("Failed to get broadcaster data:", err);
+      return {};
+    }
   }
-  if (!prediction.outcomes || prediction.outcomes.length < 2) {
-    console.error("Prediction outcomes missing or too few!", prediction.outcomes);
-    return;
+
+  async function startPrediction(prediction: Prediction) {
+    if (!prediction.prediction_window) {
+      prediction.prediction_window = 90; //default to 90 seconds
+    }
+    if (!prediction.outcomes || prediction.outcomes.length < 2) {
+      console.error(
+        "Prediction outcomes missing or too few!",
+        prediction.outcomes
+      );
+      return;
+    }
+    try {
+      console.log("Prediction outcomes before invoking:", prediction.outcomes);
+      const response = await invokeWithRefresh("create_twitch_prediction_cmd", {
+        client_id: settings.TWITCH_CLIENT_ID,
+        client_secret: settings.TWITCH_CLIENT_SECRET,
+        token: settings.TWITCH_ACCESS_TOKEN,
+        title: prediction.title,
+        outcomes: prediction.outcomes,
+        prediction_window: prediction.prediction_window,
+        broadcaster_id: settings.TWITCH_BROADCASTER_ID,
+      });
+
+      //no need to parse again, invokeWithRefresh returnes parsed object
+      console.log("Started Twitch prediction:", response);
+    } catch (err) {
+      console.error("Failed to start Twitch prediction:", err);
+    }
   }
-  try {
-    console.log("Prediction outcomes before invoking:", prediction.outcomes);
-    const response = await invokeWithRefresh("create_twitch_prediction_cmd", {
-      client_id: settings.TWITCH_CLIENT_ID,
-      client_secret: settings.TWITCH_CLIENT_SECRET,
-      token: settings.TWITCH_ACCESS_TOKEN,
-      title: prediction.title,
-      outcomes: prediction.outcomes,
-      prediction_window: prediction.prediction_window,
-      broadcaster_id: settings.TWITCH_BROADCASTER_ID,
-    });
 
-    //no need to parse again, invokeWithRefresh returnes parsed object
-    console.log("Started Twitch prediction:", response);
-  } catch (err) {
-    console.error("Failed to start Twitch prediction:", err);
+  async function endPrediction() {
+    // Implementation for ending the prediction
   }
-}
 
-async function endPrediction() {
-  // Implementation for ending the prediction
-}
+  async function deletePrediction() {
+    // Implementation for deleting the prediction
+  }
 
-async function deletePrediction() {
-  // Implementation for deleting the prediction
-}
-
-async function getCurrentPredictions() {
-  // Implementation for getting current predictions
-}
-return {
-  isReady,
-  credentialsReady,
-  settings,
-  streamerData,
-  runningOrLastPrediction,
-  startPrediction,
-  endPrediction,
-  deletePrediction,
-  getCurrentPredictions
-}
+  async function getCurrentPredictions() {
+    // Implementation for getting current predictions
+  }
+  return {
+    isReady,
+    credentialsReady,
+    settings,
+    setSettings,
+    streamerData,
+    runningOrLastPrediction,
+    startPrediction,
+    endPrediction,
+    deletePrediction,
+    getCurrentPredictions,
+  };
 }

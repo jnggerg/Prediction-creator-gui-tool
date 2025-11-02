@@ -22,7 +22,6 @@ export default function OAuthCallback() {
     let redirectTimeout: number | undefined;
 
     async function handleOAuthCallback() {
-
       //extracting auth code and errors from Twitch from the returned URL
       const params = new URLSearchParams(window.location.search);
       const error = params.get("error");
@@ -37,12 +36,13 @@ export default function OAuthCallback() {
 
       //reading the stored state for csrf protection
       try {
-        const diskState = await invoke<string>("read_file", { path: ".oauth_state" });
+        const diskState = await invoke<string>("read_file", {
+          path: ".oauth_state",
+        });
         storedState = diskState.trim() || null;
       } catch (err) {
         console.warn("Failed to read stored Twitch OAuth state from disk", err);
       }
-      
 
       if (error) {
         setStatus("error");
@@ -67,7 +67,10 @@ export default function OAuthCallback() {
       try {
         await invoke("write_file", { path: ".oauth_state", contents: "" });
       } catch (err) {
-        console.warn("Failed to clear stored Twitch OAuth state from disk", err);
+        console.warn(
+          "Failed to clear stored Twitch OAuth state from disk",
+          err
+        );
       }
 
       try {
@@ -84,18 +87,25 @@ export default function OAuthCallback() {
           return;
         }
 
-        const tokenResponse = await invoke<string>("exchange_code_for_tokens_cmd", {
-          code,
-          clientId,
-          clientSecret,
-          redirectUri,
-        });
+        const tokenResponse = await invoke<string>(
+          "exchange_code_for_tokens_cmd",
+          {
+            code,
+            clientId,
+            clientSecret,
+            redirectUri,
+          }
+        );
 
         const payload = JSON.parse(tokenResponse);
 
         if (payload.error) {
           setStatus("error");
-          setMessage(`Twitch token exchange failed: ${payload.error_description ?? payload.error}`);
+          setMessage(
+            `Twitch token exchange failed: ${
+              payload.error_description ?? payload.error
+            }`
+          );
           return;
         }
 
@@ -104,7 +114,9 @@ export default function OAuthCallback() {
 
         if (!accessToken || !refreshToken) {
           setStatus("error");
-          setMessage("Twitch token response did not include expected credentials.");
+          setMessage(
+            "Twitch token response did not include expected credentials."
+          );
           return;
         }
 
@@ -117,7 +129,11 @@ export default function OAuthCallback() {
           contents: stringifyDotEnv(envData),
         });
 
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
 
         if (!cancelled) {
           setStatus("success");
@@ -130,7 +146,9 @@ export default function OAuthCallback() {
         console.error("Failed to complete Twitch authorization", err);
         if (!cancelled) {
           setStatus("error");
-          setMessage("Something went wrong while completing Twitch authorization.");
+          setMessage(
+            "Something went wrong while completing Twitch authorization."
+          );
         }
       }
     }
