@@ -1,7 +1,7 @@
 # Prediction Creator GUI Tool
 
 A GUI app that gives the Twitch Predictions a better interface than the chat-integrated one provided by Twitch.
-The app is built in Tauri (not Electron) for low overhead, with React for frontend. All backend functionality (read/write from files, Twitch API calls) is handled with Tauri's built-in Rust backend.
+The app is built in Tauri (not Electron) for low overhead, with a clean, React-based frontend, styled with Shadcn component and Tailwindcss. All backend functionality (read/write from files, Twitch API calls) is handled with Tauri's built-in Rust backend. Everything is stored 100% locally, so you need to use your own Twitch Developer account for API credentials.
 
 ## Features
 
@@ -18,8 +18,8 @@ The app is built in Tauri (not Electron) for low overhead, with React for fronte
 - All sensitive information (Twitch clientId, secret, tokens) handled in a .env file inside `/gui/src-tauri/.env`, which you can fill manually or through the app's settings page (tokens get filled on account connect).
 
 ## Getting Started
-The program is bundled into a .exe file for ease of use for the avarage person, however you can also run it in dev mode if you like,
-but on Windows it requires a painful setup, so in that case running it on Linux / in WSL is definitely recommended.
+Currently, the program only runs in dev mode, so it requires some basic setup. (npm, gcc)
+You will also need a Twitch Developer account, since the app is fully local.
 
 ### Setup Instructions
 
@@ -39,14 +39,21 @@ but on Windows it requires a painful setup, so in that case running it on Linux 
      - (WIP) Enter OpenAI API key if you want to use AI functionalities (`https://platform.openai.com/`) 
    - Connect your Twitch account when prompted
 
-3. **Run the Application**
+3. **Setup environment**
+   - **Windows**: Setting up Tauri dev on Windows is a bit trickier then linux:
+        - Open a PowerShell, and run the setup script: `powershell -ExecutionPolicy Bypass -File .\setup-tauri.ps1`
+        - once Visual Studio opens, you will need to select the “Desktop development with C++” workload, and download it manually
+        - If this alone does not work, I recommend looking into the Tauri docs to find the exact steps needed for your environment: `https://v2.tauri.app/start/prerequisites/#windows`
+          
+   - **Linux(deb)**: Tauri install is much easier, but just in case I have provided a bash script that you can execute for simplicity (uses apt):
+        - chmod +x setup.sh
+        - ./setup.sh
+      
+4. **Run the Application**
    - After setup is complete, run the main application: (BUNDLING WIP, ONLY DEV BUILD CURRENTLY)
      - **Windows**: npm run tauri dev 
      - **Linux(Deb)**: npm run tauri dev
 
-### Running in dev mode
-- **Linux**: install npm (sudo apt install npm), and install Tauri
-- **On Windows**: setting it up for development is much more complicated, since Windows does not manually include a rust compiler.
 
 ## Important Notes
 
