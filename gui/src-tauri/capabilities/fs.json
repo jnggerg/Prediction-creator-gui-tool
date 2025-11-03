@@ -1,0 +1,14 @@
+{
+  "identifier": "fs-scope",
+  "description": "Filesystem access for the app",
+  "platforms": ["windows", "linux", "macOS"],
+  "permissions": [
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$APPDATA/prediction-creator/**",
+        "$RESOURCE/test.txt"
+      ]
+    }
+  ]
+}
