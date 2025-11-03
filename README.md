@@ -18,7 +18,7 @@ The app is built in Tauri (not Electron) for low overhead, with a clean, React-b
 - All sensitive information (Twitch clientId, secret, tokens) handled in a .env file inside `/gui/src-tauri/.env`, which you can fill manually or through the app's settings page (tokens get filled on account connect).
 
 ## Getting Started
-Currently, the program only runs in dev mode, so it requires some basic setup. (npm, gcc)
+Currently, the program only runs in dev mode, so it requires some basic setup. (nodejs, npm, rust compiler, etc.)
 You will also need a Twitch Developer account, since the app is fully local.
 
 ### Setup Instructions
