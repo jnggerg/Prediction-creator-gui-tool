@@ -153,6 +153,46 @@ export function useTwitchHandler() {
     !!settings.TWITCH_REFRESH_TOKEN &&
     !!settings.TWITCH_BROADCASTER_ID;
 
+  /* This state is used to poll for the currently running prediction every minute.
+Since the App is 100% local in current version, webhooks are not not usable, we need to resort to
+polling the Twitch API occasionally to get updates on the running prediction.
+*/
+  useEffect(() => {
+    if (!isReady) return;
+
+    let cancelled = false;
+    let intervalId: NodeJS.Timeout;
+
+    const pollPredictions = async () => {
+      try {
+        const { TWITCH_CLIENT_ID, TWITCH_ACCESS_TOKEN, TWITCH_BROADCASTER_ID } =
+          settingsRef.current;
+
+        const predictionData = await getLastPrediction(
+          1,
+          TWITCH_CLIENT_ID,
+          TWITCH_ACCESS_TOKEN,
+          TWITCH_BROADCASTER_ID
+        );
+
+        if (!cancelled && predictionData) {
+          setRunningPrediction(predictionData);
+        }
+      } catch (err) {
+        console.error("Prediction polling failed:", err);
+      }
+    };
+
+    pollPredictions();
+    //polling every minute for a new prediction
+    intervalId = setInterval(pollPredictions, 60000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [isReady]);
+
   //wrapper function around invoke to detect 401 errors and refresh tokens, save to env and retry original request
   async function invokeWithRefresh(
     cmd: string,
@@ -266,6 +306,17 @@ export function useTwitchHandler() {
         broadcaster_id: settings.TWITCH_BROADCASTER_ID,
       });
 
+      const predictionData = await getLastPrediction(
+        1,
+        settings.TWITCH_CLIENT_ID,
+        settings.TWITCH_ACCESS_TOKEN,
+        settings.TWITCH_BROADCASTER_ID
+      );
+
+      if (predictionData) {
+        setRunningPrediction(predictionData);
+      }
+
       //no need to parse again, invokeWithRefresh returnes parsed object
       console.log("Started Twitch prediction:", response);
     } catch (err) {
@@ -273,17 +324,59 @@ export function useTwitchHandler() {
     }
   }
 
-  async function endPrediction() {
-    // Implementation for ending the prediction
+  async function endPrediction(id: string, winningOutcomeId: string) {
+    if (!id || !winningOutcomeId) {
+      console.error("Prediction ID or winning outcome ID missing for ending");
+      return;
+    }
+    try {
+      const response = await invokeWithRefresh("end_prediction_cmd", {
+        client_id: settings.TWITCH_CLIENT_ID,
+        client_secret: settings.TWITCH_CLIENT_SECRET,
+        token: settings.TWITCH_ACCESS_TOKEN,
+        id: id,
+        winning_outcome_id: winningOutcomeId,
+        broadcaster_id: settings.TWITCH_BROADCASTER_ID,
+      });
+
+      console.log("Ended Twitch prediction:", response);
+      setRunningPrediction((prev: any) => {
+        const updated = [...prev];
+        updated[0] = { ...updated[0], status: "RESOLVED" };
+        return updated;
+      });
+    } catch (err) {
+      console.error("Failed to end Twitch prediction:", err);
+    }
   }
 
-  async function deletePrediction() {
-    // Implementation for deleting the prediction
+  async function cancelPrediction(id: string) {
+    console.log(id);
+    if (!id) {
+      console.error("Prediction ID missing for cancellation");
+      return;
+    }
+    try {
+      const response = await invokeWithRefresh("cancel_prediction_cmd", {
+        client_id: settings.TWITCH_CLIENT_ID,
+        client_secret: settings.TWITCH_CLIENT_SECRET,
+        token: settings.TWITCH_ACCESS_TOKEN,
+        id: id,
+        broadcaster_id: settings.TWITCH_BROADCASTER_ID,
+      });
+
+      console.log("Cancelled Twitch prediction:", response);
+
+      setRunningPrediction((prev: any) => {
+        const updated = [...prev];
+        updated[0] = { ...updated[0], status: "CANCELED" };
+        return updated;
+      });
+    } catch (err) {
+      console.error("Failed to cancel Twitch prediction:", err);
+    }
   }
 
-  async function getCurrentPredictions() {
-    // Implementation for getting current predictions
-  }
   return {
     isReady,
     credentialsReady,
@@ -293,7 +386,6 @@ export function useTwitchHandler() {
     runningOrLastPrediction,
     startPrediction,
     endPrediction,
-    deletePrediction,
-    getCurrentPredictions,
+    cancelPrediction,
   };
 }

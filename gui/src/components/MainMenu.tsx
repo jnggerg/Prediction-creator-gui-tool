@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTwitch } from "../utils/TwitchContext";
 import { Prediction, savePrediction } from "../utils/JsonHandler";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface DisplayPrediction {
   id: string;
@@ -29,6 +30,8 @@ export default function MainMenu() {
     credentialsReady,
     settings,
     runningOrLastPrediction,
+    cancelPrediction,
+    endPrediction,
     streamerData, // implementing display of current connected account (WIP)
     startPrediction,
   } = useTwitch();
@@ -104,7 +107,7 @@ export default function MainMenu() {
   if (!isReady) {
     return (
       <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
-        <p>ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧</p>
+        <p> Loading... ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧</p>
         {showLoadingTimeout && (
           <div className="flex justify-center items-center flex-col space-y-10">
             <p>
@@ -122,25 +125,27 @@ export default function MainMenu() {
 
   return (
     <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
-      <h1>Twitch Prediction Tool</h1>
+      <h1 className="text-2xl font-bold">Twitch Prediction Tool</h1>
       <div className="">
         <Button onClick={() => navigation("/CreatePrediction")}>
-          Create a new Prediction
+          <strong>Create a new Prediction</strong>
         </Button>
       </div>
       <div className="">
         <Button onClick={() => navigation("/MyPredictions")}>
-          My Predictions
+          <strong>My Predictions</strong>
         </Button>
       </div>
       <div>
-        <p>{/*JSON.stringify(runningOrLastPrediction[0])*/}</p>
-        {runningOrLastPrediction[0].status === "CANCELED" && (
+        {(runningOrLastPrediction[0].status === "CANCELED" ||
+          runningOrLastPrediction[0].status === "RESOLVED") && (
           <ul>
             <li
               key={runningOrLastPrediction[0].id}
-              className="mb-4 p-4 border rounded-lg shadow"
+              className="mb-4 p-4 border rounded-lg shadow text-center"
             >
+              <p className="text-center">Previous Prediction</p>
+              <Separator className="my-2" />
               <strong>{`Title: ${runningOrLastPrediction[0].title}`}</strong>
 
               {runningOrLastPrediction[0].outcomes &&
@@ -160,24 +165,81 @@ export default function MainMenu() {
                 )}
               <p>{`Duration: ${runningOrLastPrediction[0].prediction_window} sec`}</p>
               <p>{`Status: ${runningOrLastPrediction[0].status}`}</p>
+              <div className="flex justify-center gap-3 mt-4">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    startPrediction(
+                      parseToPrediction(runningOrLastPrediction[0])
+                    )
+                  }
+                >
+                  START AGAIN
+                </Button>
 
-              <Button
-                type="button"
-                onClick={() =>
-                  startPrediction(parseToPrediction(runningOrLastPrediction[0]))
-                }
-              >
-                START AGAIN
-              </Button>
+                <Button
+                  type="button"
+                  onClick={() =>
+                    savePrediction(
+                      parseToPrediction(runningOrLastPrediction[0])
+                    )
+                  }
+                >
+                  SAVE
+                </Button>
+              </div>
+            </li>
+          </ul>
+        )}
+        {/* This section is for displaying predictions that are currently running, and can be ended/closed */}
+        {(runningOrLastPrediction[0].status === "LOCKED" ||
+          runningOrLastPrediction[0].status === "ACTIVE") && (
+          <ul>
+            <li
+              key={runningOrLastPrediction[0].id}
+              className="mb-4 p-4 border rounded-lg shadow text-center"
+            >
+              <p className="text-center">Currently running prediction</p>
+              <Separator className="my-2" />
+              <strong>{`Title: ${runningOrLastPrediction[0].title}`}</strong>
 
-              <Button
-                type="button"
-                onClick={() =>
-                  savePrediction(parseToPrediction(runningOrLastPrediction[0]))
-                }
-              >
-                SAVE
-              </Button>
+              {runningOrLastPrediction[0].outcomes &&
+                runningOrLastPrediction[0].outcomes.length > 0 && (
+                  <ul>
+                    {runningOrLastPrediction[0].outcomes.map(
+                      (
+                        outcome: { id: string; title: string; color: string },
+                        idx: number
+                      ) => (
+                        <li key={outcome.id}>
+                          {`Outcome ${idx + 1} -> ${outcome.title}`}
+                          <Button
+                            onClick={() =>
+                              endPrediction(
+                                runningOrLastPrediction[0].id,
+                                outcome.id
+                              )
+                            }
+                          >
+                            End
+                          </Button>
+                        </li>
+                      )
+                    )}
+                  </ul>
+                )}
+              <p>{`Duration: ${runningOrLastPrediction[0].prediction_window} sec`}</p>
+              <p>{`Status: ${runningOrLastPrediction[0].status}`}</p>
+              <div className="flex justify-center gap-3 mt-4">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    cancelPrediction(runningOrLastPrediction[0].id)
+                  }
+                >
+                  CANCEL
+                </Button>
+              </div>
             </li>
           </ul>
         )}
@@ -187,8 +249,7 @@ export default function MainMenu() {
       </div>
       <div>
         <Button onClick={() => navigation("/Settings")} className="bg-red-500">
-          {" "}
-          ⚙️ Settings{" "}
+          <strong>⚙️ Settings</strong>
         </Button>
       </div>
     </div>

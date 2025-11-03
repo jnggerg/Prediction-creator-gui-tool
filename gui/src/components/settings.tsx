@@ -20,7 +20,7 @@ export function Settings() {
       </Button>
 
       <div className="min-h-screen items-center justify-center space-y-5">
-        <h1>Settings Page</h1>
+        <h1 className="text-2xl font-bold">Settings</h1>
         <form
           onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();

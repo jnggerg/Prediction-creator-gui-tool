@@ -1,5 +1,6 @@
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
+use serde_json::json;
 use serde_json::Value;
 use urlencoding::encode;
 
@@ -163,8 +164,9 @@ pub async fn get_last_predictions(
         .cloned()
         .unwrap_or_default();
 
+    
     let first_n: Vec<Value> = predictions_vec.into_iter().take(amount as usize).collect();
-
+    println!("First N Predictions: {:?}", first_n);
     if first_n.is_empty() { // ensure that the returned Err() is also structured as a JSON so parsing wont break
         return Err("{\"error\": \"No predictions found, returned vector is empty.\"}".to_string());
     }
@@ -204,6 +206,78 @@ pub async fn exchange_code_for_tokens(
 
     if !status.is_success() {
         return Err(body.to_string());
+    }
+
+    Ok(body)
+}
+
+pub async fn cancel_prediction(
+    client_id: String,
+    access_token: String,
+    broadcaster_id: String,
+    id: String,
+) -> Result<String, String> {
+    let client = Client::new();
+
+    let url = "https://api.twitch.tv/helix/predictions";
+
+    let payload = json!({
+        "broadcaster_id": broadcaster_id,
+        "id": id,
+        "status": "CANCELED"
+    });
+
+    let response = client
+        .patch(url)
+        .header("Client-ID", &client_id)
+        .bearer_auth(&access_token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("{}: {}", status, body));
+    }
+
+    Ok(body)
+}
+
+pub async fn end_prediction(
+    client_id: String,
+    access_token: String,
+    broadcaster_id: String,
+    id: String,
+    winning_outcome_id: String,
+) -> Result<String, String> {
+    let client = Client::new();
+
+    let url = "https://api.twitch.tv/helix/predictions";
+
+    let payload = json!({
+        "broadcaster_id": broadcaster_id,
+        "id": id,
+        "status": "RESOLVED",
+        "winning_outcome_id": winning_outcome_id
+    });
+
+    let response = client
+        .patch(url)
+        .header("Client-ID", &client_id)
+        .bearer_auth(&access_token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("{}: {}", status, body));
     }
 
     Ok(body)

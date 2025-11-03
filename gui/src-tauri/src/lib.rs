@@ -75,6 +75,29 @@ async fn get_last_predictions_cmd(args: HashMap<String, String>) -> Result<Strin
 }
 
 #[tauri::command]
+async fn cancel_prediction_cmd(args: HashMap<String, String>) -> Result<String, String> {
+    let client_id = args.get("client_id").cloned().unwrap_or_default();
+    let access_token = args.get("token").cloned().unwrap_or_default();
+    let broadcaster_id = args.get("broadcaster_id").cloned().unwrap_or_default();
+    let id = args.get("id").cloned().unwrap_or_default();
+
+    twitch_api::cancel_prediction(client_id, access_token, broadcaster_id, id).await
+}
+
+#[tauri::command]
+async fn end_prediction_cmd(args: HashMap<String, String>) -> Result<String, String> {
+    let client_id = args.get("client_id").cloned().unwrap_or_default();
+    let access_token = args.get("token").cloned().unwrap_or_default();
+    let broadcaster_id = args.get("broadcaster_id").cloned().unwrap_or_default();
+    let id = args.get("id").cloned().unwrap_or_default();
+    let winning_outcome_id = args.get("winning_outcome_id").cloned().unwrap_or_default();
+
+    print!("{}",id);
+
+    twitch_api::end_prediction(client_id, access_token, broadcaster_id, id, winning_outcome_id).await
+}
+
+#[tauri::command]
 async fn exchange_code_for_tokens_cmd(code: String,
     client_id: String,
     client_secret: String,
@@ -99,9 +122,10 @@ pub fn run() {
             create_twitch_prediction_cmd,
             refresh_tokens_cmd,
             get_user_data_cmd,
-            echo_args,
             exchange_code_for_tokens_cmd,
-            get_last_predictions_cmd
+            get_last_predictions_cmd,
+            cancel_prediction_cmd,
+            end_prediction_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

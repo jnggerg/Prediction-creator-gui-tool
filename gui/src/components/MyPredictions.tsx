@@ -38,7 +38,7 @@ export default function MyPredictions() {
         {"⮜ Back"}
       </Button>
       <div className="min-h-screen w-full max-w-md mx-auto flex flex-col items-center space-y-5">
-        <h1>My Predictions</h1>
+        <h1 className="text-2xl font-bold">My Predictions</h1>
         <ul>
           {predictions.length === 0 && <li>No predictions found.</li>}
           {predictions.map((prediction) => (

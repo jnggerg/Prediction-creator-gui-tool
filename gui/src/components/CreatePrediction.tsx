@@ -182,7 +182,7 @@ export default function CreatePrediction() {
         <div className="invisible">fillertext123 </div>
       </div>
       <div className="min-h-screen items-center justify-center">
-        <h1>Create a New Prediction</h1>
+        <h1 className="text-2xl font-bold">Create new prediction</h1>
 
         <form onSubmit={handleSave} noValidate>
           <FieldGroup className="gap-4">
@@ -225,7 +225,7 @@ export default function CreatePrediction() {
                   be between 30 and 1800.
                 </FieldDescription>
               </Field>
-              <div className="flex felx-row justify-center gap-4 mt-4">
+              <div className="flex flex-row justify-center gap-4 mt-4">
                 <Button type="button" onClick={handleSaveAndStart}>
                   Save and start
                 </Button>
