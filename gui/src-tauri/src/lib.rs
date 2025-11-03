@@ -40,7 +40,6 @@ async fn create_twitch_prediction_cmd(args: HashMap<String, String>) -> Result<S
         outcomes,
         prediction_window,
     };
-    println!("Sending payload: {}", serde_json::to_string_pretty(&payload).unwrap());
     twitch_api::create_twitch_prediction(client_id, access_token, payload).await
 }
 #[tauri::command]
@@ -92,8 +91,6 @@ async fn end_prediction_cmd(args: HashMap<String, String>) -> Result<String, Str
     let id = args.get("id").cloned().unwrap_or_default();
     let winning_outcome_id = args.get("winning_outcome_id").cloned().unwrap_or_default();
 
-    print!("{}",id);
-
     twitch_api::end_prediction(client_id, access_token, broadcaster_id, id, winning_outcome_id).await
 }
 
@@ -104,11 +101,6 @@ async fn exchange_code_for_tokens_cmd(code: String,
     redirect_uri: String,
 ) -> Result<String, String> {
     twitch_api::exchange_code_for_tokens(code, client_id, client_secret, redirect_uri).await
-}
-
-#[tauri::command]
-fn echo_args(args: std::collections::HashMap<String, String>) -> String {
-    format!("Received keys: {:?}", args.keys())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

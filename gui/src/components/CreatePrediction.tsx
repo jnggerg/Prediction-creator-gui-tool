@@ -154,10 +154,7 @@ export default function CreatePrediction() {
   return (
     <div className="dark bg-background text-foreground p-5">
       <div className="mb-4 w-full flex items-center">
-        <Button onClick={() => navigate(-1)} className="shrink-0">
-          ⮜ Back
-        </Button>
-
+        <Button onClick={() => navigate(-1)}>⮜ Back</Button>
         <div className="flex-1 justify-center">
           {status === "saved" && (
             <p className="text-center text-sm font-medium text-muted-foreground">

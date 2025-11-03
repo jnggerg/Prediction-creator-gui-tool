@@ -166,7 +166,6 @@ pub async fn get_last_predictions(
 
     
     let first_n: Vec<Value> = predictions_vec.into_iter().take(amount as usize).collect();
-    println!("First N Predictions: {:?}", first_n);
     if first_n.is_empty() { // ensure that the returned Err() is also structured as a JSON so parsing wont break
         return Err("{\"error\": \"No predictions found, returned vector is empty.\"}".to_string());
     }

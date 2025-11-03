@@ -5,16 +5,10 @@ import { useTwitch } from "../utils/TwitchContext";
 import { Prediction, savePrediction } from "../utils/JsonHandler";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
-interface DisplayPrediction {
-  id: string;
-  title: string;
-  outcomes: Array<string>;
-  prediction_window: number;
-}
+import PartnerBadge from "@/components/ui/partnerBadge";
 
 function parseToPrediction(twitchPrediction: any): Prediction {
-  const prediction: DisplayPrediction = {
+  const prediction: Prediction = {
     id: twitchPrediction.id,
     title: twitchPrediction.title,
     outcomes: twitchPrediction.outcomes.map((outcome: any) => outcome.title),
@@ -125,7 +119,35 @@ export default function MainMenu() {
 
   return (
     <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
-      <h1 className="text-2xl font-bold">Twitch Prediction Tool</h1>
+      <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center">
+        <div>
+          <Button
+            onClick={() => navigation("/Settings")}
+            className="bg-red-500"
+          >
+            <strong>⚙️ Settings</strong>
+          </Button>
+        </div>
+        <h1 className="text-center text-2xl font-bold">
+          Twitch Prediction Tool
+        </h1>
+        <div className="justify-self-end mb-4 rounded-lg border border-purple-700 p-4 text-center shadow">
+          <p>Connected account:</p>
+          <div className="flex items-center justify-center gap-1">
+            <img
+              src={streamerData.profile_image_url}
+              alt={streamerData.display_name}
+              width={40}
+              height={40}
+              className="rounded-full border dark:border-2 border-purple-700"
+            />
+            {streamerData.display_name}
+            {streamerData.broadcaster_type === "partner" && (
+              <PartnerBadge size={20} color="#9146FF" />
+            )}
+          </div>
+        </div>
+      </div>
       <div className="">
         <Button onClick={() => navigation("/CreatePrediction")}>
           <strong>Create a new Prediction</strong>
@@ -243,14 +265,6 @@ export default function MainMenu() {
             </li>
           </ul>
         )}
-      </div>
-      <div>
-        <h2> Currently connected account: {settings.TWITCH_CHANNEL_NAME} </h2>
-      </div>
-      <div>
-        <Button onClick={() => navigation("/Settings")} className="bg-red-500">
-          <strong>⚙️ Settings</strong>
-        </Button>
       </div>
     </div>
   );

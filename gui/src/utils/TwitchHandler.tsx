@@ -42,7 +42,7 @@ export function useTwitchHandler() {
   }, [settings]);
 
   const [runningOrLastPrediction, setRunningPrediction] = useState<any>(null);
-  const [streamerData, setStreamerData] = useState<any>({});
+  const [streamerData, setStreamerData] = useState<any>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +78,7 @@ export function useTwitchHandler() {
           }
 
           // Fetch broadcaster ID if missing
-          if (!broadcasterId) {
+          if (!broadcasterId || !streamerData) {
             const broadcasterData = await getBroadcasterData(
               data.TWITCH_CHANNEL_NAME,
               data.TWITCH_CLIENT_ID,
@@ -208,7 +208,6 @@ polling the Twitch API occasionally to get updates on the running prediction.
     console.log(cmd, args);
     const raw = await invoke<string>(cmd, { args });
     const result = JSON.parse(raw);
-    console.log("Twitch API response:", result);
 
     if (result?.status === 401) {
       console.log("Access token expired, refreshing tokens");
@@ -219,7 +218,6 @@ polling the Twitch API occasionally to get updates on the running prediction.
           refresh_token: settingsRef.current.TWITCH_REFRESH_TOKEN,
         },
       });
-      console.log(refreshResult);
       try {
         const newAccessToken = refreshResult.access_token;
         const newRefreshToken = refreshResult.refresh_token;
@@ -295,7 +293,6 @@ polling the Twitch API occasionally to get updates on the running prediction.
       return;
     }
     try {
-      console.log("Prediction outcomes before invoking:", prediction.outcomes);
       const response = await invokeWithRefresh("create_twitch_prediction_cmd", {
         client_id: settings.TWITCH_CLIENT_ID,
         client_secret: settings.TWITCH_CLIENT_SECRET,
@@ -317,8 +314,8 @@ polling the Twitch API occasionally to get updates on the running prediction.
         setRunningPrediction(predictionData);
       }
 
-      //no need to parse again, invokeWithRefresh returnes parsed object
-      console.log("Started Twitch prediction:", response);
+      console.log("Started Twitch prediction:", response.data[0]);
+      return response.text;
     } catch (err) {
       console.error("Failed to start Twitch prediction:", err);
     }
