@@ -18,6 +18,7 @@ Write-Host "Installing Visual Studio Build Tools..."
 winget install -e --id Microsoft.VisualStudio.2022.BuildTools -h --accept-package-agreements --accept-source-agreements
 
 Write-Host "Installing WebView2 Runtime..."
+#This is installed in Win11 by default, but in case youre still on Win10
 winget install -e --id Microsoft.EdgeWebView2Runtime -h --accept-package-agreements --accept-source-agreements
 
 # Configure Rust
