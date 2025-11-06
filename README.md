@@ -31,15 +31,7 @@ You will also need a Twitch Developer account, since the app is fully local.
      - Select a category (not important)
      - Create the app
 
-2. **Initialize the Application**
-   - Enter the following information in the settings:
-     - Client ID (from your Twitch Developer app)
-     - Client Secret (from your Twitch Developer app)
-     - Channel name to run predictions on (needs to be your own channel, as you will need to login through OAuth2 for tokens)
-     - (WIP) Enter OpenAI API key if you want to use AI functionalities (`https://platform.openai.com/`) 
-   - Connect your Twitch account when prompted
-
-3. **Setup environment**
+2. **Setup environment**
    - **Windows**: Setting up Tauri dev on Windows is a bit trickier then linux:
         - Open a PowerShell, and run the setup script: `powershell -ExecutionPolicy Bypass -File .\setup-tauri.ps1`
         - once Visual Studio opens, you will need to select the “Desktop development with C++” workload, and download it manually
@@ -49,11 +41,18 @@ You will also need a Twitch Developer account, since the app is fully local.
         - chmod +x setup.sh
         - ./setup.sh
       
-4. **Run the Application**
+3. **Run the Application**
    - After setup is complete, run the main application: (BUNDLING WIP, ONLY DEV BUILD CURRENTLY)
      - **Windows**: npm run tauri dev 
      - **Linux(Deb)**: npm run tauri dev
 
+4. **Edit the settings**
+   - Enter the following information in the settings:
+     - Client ID (from your Twitch Developer app)
+     - Client Secret (from your Twitch Developer app)
+     - Channel name to run predictions on (needs to be your own channel, as you will need to login through OAuth2 for tokens)
+     - (WIP) Enter OpenAI API key if you want to use AI functionalities (`https://platform.openai.com/`) 
+   - Connect your Twitch account when prompted
 
 ## Important Notes
 
