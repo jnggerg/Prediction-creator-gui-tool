@@ -12,7 +12,7 @@
   },
   "app": {
     "security": {
-      "capabilities": ["fs-scope"]
+      "capabilities": ["default", "fs-scope"]
     },
     "windows": [
       {

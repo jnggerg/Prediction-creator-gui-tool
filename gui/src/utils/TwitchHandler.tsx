@@ -41,6 +41,8 @@ export function useTwitchHandler() {
     settingsRef.current = settings;
   }, [settings]);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [runningOrLastPrediction, setRunningPrediction] = useState<any>(null);
   const [streamerData, setStreamerData] = useState<any>(null);
 
@@ -58,6 +60,8 @@ export function useTwitchHandler() {
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
           console.log("Loaded env data:", data);
 
+          const redirectUri = "http://localhost:1420/oauth/callback";
+
           if (!accessToken || !refreshToken) {
             console.log(
               "Access or refresh token missing, skipping further setup"
@@ -67,7 +71,7 @@ export function useTwitchHandler() {
               TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
               TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
               OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-              OAUTH_REDIRECT_URI: "http://localhost:1420/oauth/callback",
+              OAUTH_REDIRECT_URI: redirectUri,
               TWITCH_ACCESS_TOKEN: accessToken,
               TWITCH_REFRESH_TOKEN: refreshToken,
               TWITCH_BROADCASTER_ID: broadcasterId,
@@ -94,7 +98,7 @@ export function useTwitchHandler() {
             TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
             TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
             OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-            OAUTH_REDIRECT_URI: "http://localhost:1420/oauth/callback",
+            OAUTH_REDIRECT_URI: redirectUri,
             TWITCH_ACCESS_TOKEN: accessToken,
             TWITCH_REFRESH_TOKEN: refreshToken,
             TWITCH_BROADCASTER_ID: broadcasterId,
@@ -138,20 +142,29 @@ export function useTwitchHandler() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   //checking if the basic credentials are set
-  const credentialsReady =
-    !!settings.TWITCH_CLIENT_ID &&
-    !!settings.TWITCH_CLIENT_SECRET &&
-    !!settings.TWITCH_CHANNEL_NAME;
+  const [credentialsReady, setCredentialsReady] = useState(false);
+  useEffect(() => {
+    setCredentialsReady(
+      !!settings.TWITCH_CLIENT_ID &&
+        !!settings.TWITCH_CLIENT_SECRET &&
+        !!settings.TWITCH_CHANNEL_NAME
+    );
+  }, [settings]);
+
+  const [isReady, setIsReady] = useState(false);
 
   //checking if all tokens / broadcaster id is set
-  const isReady =
-    !!credentialsReady &&
-    !!settings.TWITCH_ACCESS_TOKEN &&
-    !!settings.TWITCH_REFRESH_TOKEN &&
-    !!settings.TWITCH_BROADCASTER_ID;
+  useEffect(() => {
+    setIsReady(
+      !!credentialsReady &&
+        !!settings.TWITCH_ACCESS_TOKEN &&
+        !!settings.TWITCH_REFRESH_TOKEN &&
+        !!settings.TWITCH_BROADCASTER_ID
+    );
+  }, [credentialsReady, settings]);
 
   /* This state is used to poll for the currently running prediction every minute.
 Since the App is 100% local in current version, webhooks are not not usable, we need to resort to
@@ -384,5 +397,6 @@ polling the Twitch API occasionally to get updates on the running prediction.
     startPrediction,
     endPrediction,
     cancelPrediction,
+    refresh: () => setRefreshKey((prev) => prev + 1),
   };
 }

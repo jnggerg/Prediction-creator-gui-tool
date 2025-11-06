@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { parseDotEnv, stringifyDotEnv } from "../utils/TwitchHandler";
+import { useTwitch } from "@/utils/TwitchContext";
+import { Button } from "@/components/ui/button";
 
 type Status = "processing" | "success" | "error";
 
@@ -10,6 +12,7 @@ export default function OAuthCallback() {
   const [status, setStatus] = useState<Status>("processing");
   const [message, setMessage] = useState("Processing Twitch authorization…");
   const processedRef = useRef(false);
+  const { refresh } = useTwitch();
 
   useEffect(() => {
     // so react doesnt re-render and re-process the same auth code, resulting in an error
@@ -137,6 +140,7 @@ export default function OAuthCallback() {
 
         if (!cancelled) {
           setStatus("success");
+          refresh();
           setMessage("Twitch account connected! Redirecting…");
           redirectTimeout = window.setTimeout(() => {
             navigate("/");
@@ -164,14 +168,14 @@ export default function OAuthCallback() {
   }, [navigate]);
 
   return (
-    <main className="container">
+    <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
       <h1>Twitch Authorization</h1>
       <p>{message}</p>
       {status !== "processing" && (
-        <button onClick={() => navigate("/", { replace: true })}>
+        <Button onClick={() => navigate("/", { replace: true })}>
           Return to main menu
-        </button>
+        </Button>
       )}
-    </main>
+    </div>
   );
 }

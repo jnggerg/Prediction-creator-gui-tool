@@ -1,6 +1,6 @@
 mod twitch_api;
-use std::collections::HashMap;
 use serde_json;
+use std::collections::HashMap;
 
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
@@ -52,7 +52,9 @@ async fn get_user_data_cmd(args: HashMap<String, String>) -> Result<String, Stri
 }
 
 #[tauri::command]
-async fn refresh_tokens_cmd(args: HashMap<String, String>) -> Result<twitch_api::TokenResponse, String> {
+async fn refresh_tokens_cmd(
+    args: HashMap<String, String>,
+) -> Result<twitch_api::TokenResponse, String> {
     let client_id = args.get("client_id").cloned().unwrap_or_default();
     let client_secret = args.get("client_secret").cloned().unwrap_or_default();
     let refresh_token = args.get("refresh_token").cloned().unwrap_or_default();
@@ -91,11 +93,19 @@ async fn end_prediction_cmd(args: HashMap<String, String>) -> Result<String, Str
     let id = args.get("id").cloned().unwrap_or_default();
     let winning_outcome_id = args.get("winning_outcome_id").cloned().unwrap_or_default();
 
-    twitch_api::end_prediction(client_id, access_token, broadcaster_id, id, winning_outcome_id).await
+    twitch_api::end_prediction(
+        client_id,
+        access_token,
+        broadcaster_id,
+        id,
+        winning_outcome_id,
+    )
+    .await
 }
 
 #[tauri::command]
-async fn exchange_code_for_tokens_cmd(code: String,
+async fn exchange_code_for_tokens_cmd(
+    code: String,
     client_id: String,
     client_secret: String,
     redirect_uri: String,

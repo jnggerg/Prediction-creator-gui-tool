@@ -10,16 +10,15 @@ export function Settings() {
   const { settings, setSettings } = useTwitchHandler();
 
   return (
-    <div className="dark bg-background text-foreground p-5">
+    <div className="dark bg-background text-foreground min-h-screen items-center p-5 space-y-5">
       <Button type="button" onClick={() => navigate(-1)}>
         {"⮜ Back"}
       </Button>
       <Button type="button" className="right-0 bg-gray-500">
-        {" "}
-        ?{" "}
+        ?
       </Button>
 
-      <div className="min-h-screen items-center justify-center space-y-5">
+      <div className="items-center justify-center space-y-5">
         <h1 className="text-2xl font-bold">Settings</h1>
         <form
           onSubmit={(e: React.FormEvent<HTMLFormElement>) => {

@@ -7,11 +7,14 @@ import {
 import { useEffect, useState } from "react";
 import { useTwitch } from "../utils/TwitchContext";
 import { Button } from "@/components/ui/button";
+import AlertMessage, { Status } from "../utils/AlertMessage";
 
 export default function MyPredictions() {
   const navigate = useNavigate();
   const { startPrediction } = useTwitch();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const { status, message, setStatus, setMessage, DisplayMessage } =
+    AlertMessage();
 
   useEffect(() => {
     let isMounted = true;
@@ -24,6 +27,8 @@ export default function MyPredictions() {
         }
       } catch (error) {
         console.error("Failed to load predictions:", error);
+        setMessage("Failed to load predictions.");
+        setStatus("error");
       }
     }
     load();
@@ -37,6 +42,7 @@ export default function MyPredictions() {
       <Button type="button" onClick={() => navigate(-1)}>
         {"⮜ Back"}
       </Button>
+      <DisplayMessage />
       <div className="min-h-screen w-full max-w-md mx-auto flex flex-col items-center space-y-5">
         <h1 className="text-2xl font-bold">My Predictions</h1>
         <ul>

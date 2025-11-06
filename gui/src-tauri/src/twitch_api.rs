@@ -1,5 +1,5 @@
 use reqwest::Client;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value;
 use urlencoding::encode;
@@ -25,19 +25,17 @@ pub struct Outcome {
 
 /*
 Twitch API error response shape
-{  
+{
     "error": "<Error Type>",
     "status": <HTTP status code>,
     "message": "<Human-readable error message>"
 }
 Twitch API successful response shape
-{ 
+{
     "data": [...]
-}  
+}
 
 */
-
-
 
 pub async fn refresh_tokens(
     client_id: String,
@@ -69,7 +67,6 @@ pub async fn refresh_tokens(
     Ok(tokens)
 }
 
-
 pub async fn create_twitch_prediction(
     client_id: String,
     access_token: String,
@@ -86,12 +83,8 @@ pub async fn create_twitch_prediction(
         .await
         .map_err(|e| e.to_string())?;
 
-
     let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
+    let body = response.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
         return Err(body);
@@ -115,19 +108,14 @@ pub async fn get_user_data(
         .await
         .map_err(|e| e.to_string())?;
 
-
     let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
+    let body = response.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
         return Err(body);
     }
     Ok(body)
 }
-
 
 pub async fn get_last_predictions(
     amount: u32,
@@ -146,27 +134,36 @@ pub async fn get_last_predictions(
         .await
         .map_err(|e| e.to_string())?;
 
-    let status = response.status(); 
+    let status = response.status();
 
     // returning the 401 as an Ok(), so that we can refresh token without triggering the catch block
-    if status == 401 { 
-        return Ok(response.text().await.map_err(|e| e.to_string())?.to_string());
+    if status == 401 {
+        return Ok(response
+            .text()
+            .await
+            .map_err(|e| e.to_string())?
+            .to_string());
     }
     if !status.is_success() {
-        return Err(response.text().await.map_err(|e| e.to_string())?.to_string());
+        return Err(response
+            .text()
+            .await
+            .map_err(|e| e.to_string())?
+            .to_string());
     }
     let text = response.text().await.map_err(|e| e.to_string())?;
     let data: Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    
+
     // parse data into array
-    let predictions_vec = data.get("data")
+    let predictions_vec = data
+        .get("data")
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
 
-    
     let first_n: Vec<Value> = predictions_vec.into_iter().take(amount as usize).collect();
-    if first_n.is_empty() { // ensure that the returned Err() is also structured as a JSON so parsing wont break
+    if first_n.is_empty() {
+        // ensure that the returned Err() is also structured as a JSON so parsing wont break
         return Err("{\"error\": \"No predictions found, returned vector is empty.\"}".to_string());
     }
 
@@ -198,10 +195,7 @@ pub async fn exchange_code_for_tokens(
         .map_err(|e| e.to_string())?;
 
     let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
+    let body = response.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
         return Err(body.to_string());

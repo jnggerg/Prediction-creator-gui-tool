@@ -15,16 +15,13 @@ import {
 } from "@/components/ui/field";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-
-type Status = "idle" | "saved" | "error";
+import AlertMessage from "../utils/AlertMessage";
 
 export default function CreatePrediction() {
   const { startPrediction } = useTwitch();
 
   const navigate = useNavigate();
-  const [status, setStatus] = useState<Status>("idle");
-  const [message, setMessage] = useState<string>("");
+  const { status, setStatus, setMessage, DisplayMessage } = AlertMessage();
 
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [formValues, setFormValues] = useState({
@@ -155,27 +152,7 @@ export default function CreatePrediction() {
     <div className="dark bg-background text-foreground p-5">
       <div className="mb-4 w-full flex items-center">
         <Button onClick={() => navigate(-1)}>⮜ Back</Button>
-        <div className="flex-1 justify-center">
-          {status === "saved" && (
-            <p className="text-center text-sm font-medium text-muted-foreground">
-              {message}
-            </p>
-          )}
-
-          {status === "error" && (
-            <Alert
-              variant="destructive"
-              className="border-2 bg-transparent flex justfiy-center mx-auto w-fit"
-            >
-              <AlertTitle className="text-sm font-semibold text-destructive">
-                !Error! {"->"}
-              </AlertTitle>
-              <AlertDescription className="text-sm text-destructive/90">
-                {message}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
+        <DisplayMessage />
         <div className="invisible">fillertext123 </div>
       </div>
       <div className="min-h-screen items-center justify-center">

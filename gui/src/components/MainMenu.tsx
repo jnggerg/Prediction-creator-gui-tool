@@ -26,9 +26,10 @@ export default function MainMenu() {
     runningOrLastPrediction,
     cancelPrediction,
     endPrediction,
-    streamerData, // implementing display of current connected account (WIP)
+    streamerData,
     startPrediction,
   } = useTwitch();
+
   //checking timeout - if loading takes more than 3 seconds, that means that credentials are likely missing
   const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
 
@@ -67,7 +68,9 @@ export default function MainMenu() {
       settings.TWITCH_CLIENT_ID
     }&redirect_uri=${encodeURIComponent(
       settings.OAUTH_REDIRECT_URI
-    )}&response_type=code&scope=${scope}&state=${state}`;
+    )}&response_type=code&scope=${scope}&state=${state}&force_verify=true`;
+    // adding force_verify to params, so user can change account if wanted and
+    //  prevents automatic login after disconnecting account, WIP
 
     window.location.replace(authUrl);
   }
@@ -131,7 +134,7 @@ export default function MainMenu() {
         <h1 className="text-center text-2xl font-bold">
           Twitch Prediction Tool
         </h1>
-        <div className="justify-self-end mb-4 rounded-lg border border-purple-700 p-4 text-center shadow">
+        <div className="justify-self-end mb-4 rounded-lg border border-purple-700 p-4 text-center shadow space-y-2">
           <p>Connected account:</p>
           <div className="flex items-center justify-center gap-1">
             <img
@@ -146,6 +149,7 @@ export default function MainMenu() {
               <PartnerBadge size={20} color="#9146FF" />
             )}
           </div>
+          <Button>{/*To be implemented*/}Disconnect</Button>
         </div>
       </div>
       <div className="">
