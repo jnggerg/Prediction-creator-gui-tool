@@ -14,6 +14,24 @@ export default function MainMenu() {
   const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
 
   useEffect(() => {
+    const isDev = import.meta.env.DEV;
+    if (isDev) {
+      return;
+    }
+
+    async function startTinyHttp() {
+      try {
+        await invoke("start_oauth_server");
+        console.log("OAuth server started");
+      } catch (error) {
+        console.error("Failed to start OAuth server:", error);
+      }
+    }
+
+    startTinyHttp();
+  }, []);
+
+  useEffect(() => {
     if (isReady) {
       setShowLoadingTimeout(false);
       return;
@@ -44,10 +62,14 @@ export default function MainMenu() {
     const scope = encodeURIComponent(
       "channel:manage:predictions channel:read:predictions"
     );
+    const redirectUri = import.meta.env.DEV
+      ? "http://localhost:1420/oauth/callback" // for dev mode with vite
+      : "http://localhost:3000/callback"; // for prod with tiny_http
+
     const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${
       settings.TWITCH_CLIENT_ID
     }&redirect_uri=${encodeURIComponent(
-      settings.OAUTH_REDIRECT_URI
+      redirectUri
     )}&response_type=code&scope=${scope}&state=${state}&force_verify=true`;
     // adding force_verify to params, so user can change account if wanted and
     //  prevents automatic login after disconnecting account, WIP

@@ -31,7 +31,6 @@ export function useTwitchHandler() {
     TWITCH_CLIENT_SECRET: "",
     TWITCH_CHANNEL_NAME: "",
     OPENAI_API_KEY: "",
-    OAUTH_REDIRECT_URI: "",
     TWITCH_ACCESS_TOKEN: "",
     TWITCH_REFRESH_TOKEN: "",
     TWITCH_BROADCASTER_ID: "",
@@ -65,8 +64,6 @@ export function useTwitchHandler() {
           let broadcasterId = data.TWITCH_BROADCASTER_ID?.trim() ?? "";
           console.log("Loaded env data:", data);
 
-          const redirectUri = "http://localhost:1420/oauth/callback";
-
           if (!accessToken || !refreshToken) {
             console.log(
               "Access or refresh token missing, skipping further setup"
@@ -76,7 +73,6 @@ export function useTwitchHandler() {
               TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
               TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
               OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-              OAUTH_REDIRECT_URI: redirectUri,
               TWITCH_ACCESS_TOKEN: accessToken,
               TWITCH_REFRESH_TOKEN: refreshToken,
               TWITCH_BROADCASTER_ID: broadcasterId,
@@ -103,7 +99,6 @@ export function useTwitchHandler() {
             TWITCH_CLIENT_SECRET: data.TWITCH_CLIENT_SECRET,
             TWITCH_CHANNEL_NAME: data.TWITCH_CHANNEL_NAME,
             OPENAI_API_KEY: data.OPENAI_API_KEY ?? "",
-            OAUTH_REDIRECT_URI: redirectUri,
             TWITCH_ACCESS_TOKEN: accessToken,
             TWITCH_REFRESH_TOKEN: refreshToken,
             TWITCH_BROADCASTER_ID: broadcasterId,

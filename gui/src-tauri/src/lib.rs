@@ -2,6 +2,54 @@ mod twitch_api;
 use serde_json;
 use std::collections::HashMap;
 use tauri::Manager;
+use std::thread;
+use tiny_http::{Server, Response};
+
+
+#[tauri::command]
+fn start_oauth_server() -> Result<(), String> {
+    let port = 3000;
+    
+    thread::spawn(move || {
+        let server = Server::http(format!("127.0.0.1:{}", port))
+            .map_err(|e| format!("Failed to start OAuth server: {}", e))
+            .unwrap();
+        
+        println!("OAuth callback server listening on http://localhost:{}", port);
+        
+        for request in server.incoming_requests() {
+            let url = request.url();
+            
+            // Extract the full query string
+            let query = url.split('?').nth(1).unwrap_or("");
+            
+            let html = format!(r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+</head>
+<body>
+    <p>Redirecting to app...</p>
+    <script>
+        // Redirect with hash instead of path
+        window.location.href = 'tauri://localhost/#/oauth/callback?{}';
+    </script>
+</body>
+</html>
+"#, query);
+            
+            let response = Response::from_string(html)
+                .with_header(
+                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap()
+                );
+            let _ = request.respond(response);
+        }
+    });
+    
+    Ok(())
+}
 
 #[tauri::command]
 fn read_file(app: tauri::AppHandle, path: String) -> Result<String, String> {
@@ -153,6 +201,7 @@ pub fn run() {
             cancel_prediction_cmd,
             end_prediction_cmd,
             get_file_location,
+            start_oauth_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

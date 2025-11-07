@@ -82,7 +82,9 @@ export default function OAuthCallback() {
 
         const clientId = envData.TWITCH_CLIENT_ID?.trim();
         const clientSecret = envData.TWITCH_CLIENT_SECRET?.trim();
-        const redirectUri = "http://localhost:1420/oauth/callback";
+        const redirectUri = import.meta.env.DEV
+          ? "http://localhost:1420/oauth/callback" // for dev mode with vite
+          : "http://localhost:3000/callback"; // for prod with tiny_http
 
         if (!clientId || !clientSecret) {
           setStatus("error");
