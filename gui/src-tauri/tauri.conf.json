@@ -13,7 +13,8 @@
 
   "bundle": {
     "active": true,
-    "targets": ["appimage", "deb", "msi", "nsis"]
+    "targets": ["appimage", "deb", "msi", "nsis"],
+    "icon": ["icons/icon.png"]
   },
 
   "app": {
