@@ -2,35 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTwitch } from "../utils/TwitchContext";
-import { Prediction, savePrediction } from "../utils/JsonHandler";
+import AccountCard from "@/components/ui/accountCard";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import PartnerBadge from "@/components/ui/partnerBadge";
-
-function parseToPrediction(twitchPrediction: any): Prediction {
-  const prediction: Prediction = {
-    id: twitchPrediction.id,
-    title: twitchPrediction.title,
-    outcomes: twitchPrediction.outcomes.map((outcome: any) => outcome.title),
-    prediction_window: twitchPrediction.prediction_window,
-  };
-  return prediction;
-}
+import { PrevPredictionDisplay } from "@/components/ui/prevPredictionDisplay";
 
 export default function MainMenu() {
   const navigation = useNavigate();
-  const {
-    isReady,
-    credentialsReady,
-    settings,
-    runningOrLastPrediction,
-    cancelPrediction,
-    endPrediction,
-    streamerData,
-    startPrediction,
-  } = useTwitch();
+  const { isReady, credentialsReady, settings } = useTwitch();
 
-  //checking timeout - if loading takes more than 3 seconds, that means that credentials are likely missing
+  //checking timeout - if loading takes more than 2 seconds, that means that credentials are likely missing
   const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
 
   useEffect(() => {
@@ -41,7 +21,7 @@ export default function MainMenu() {
 
     const timer = window.setTimeout(() => {
       setShowLoadingTimeout(true);
-    }, 3000);
+    }, 2000);
 
     return () => window.clearTimeout(timer);
   }, [isReady]);
@@ -75,7 +55,7 @@ export default function MainMenu() {
     window.location.replace(authUrl);
   }
 
-  //if credentials are missing, for user to go into settings and add them
+  //if credentials are missing, force user to go into settings and add them
   if (!credentialsReady) {
     return (
       <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-10">
@@ -101,6 +81,7 @@ export default function MainMenu() {
     );
   }
 
+  // if tokens are missing, ask user to connect Twitch account
   if (!isReady) {
     return (
       <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
@@ -114,6 +95,14 @@ export default function MainMenu() {
             <Button onClick={() => handleTwitchAuth()}>
               Connect Twitch account
             </Button>
+            <div>
+              <Button
+                onClick={() => navigation("/Settings")}
+                className="bg-red-500"
+              >
+                <strong>⚙️ Settings</strong>
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -121,7 +110,7 @@ export default function MainMenu() {
   }
 
   return (
-    <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-5">
+    <div className="dark bg-background text-foreground min-h-screen items-center p-5 flex flex-col space-y-2">
       <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center">
         <div>
           <Button
@@ -131,26 +120,11 @@ export default function MainMenu() {
             <strong>⚙️ Settings</strong>
           </Button>
         </div>
+
         <h1 className="text-center text-2xl font-bold">
           Twitch Prediction Tool
         </h1>
-        <div className="justify-self-end mb-4 rounded-lg border border-purple-700 p-4 text-center shadow space-y-2">
-          <p>Connected account:</p>
-          <div className="flex items-center justify-center gap-1">
-            <img
-              src={streamerData.profile_image_url}
-              alt={streamerData.display_name}
-              width={40}
-              height={40}
-              className="rounded-full border dark:border-2 border-purple-700"
-            />
-            {streamerData.display_name}
-            {streamerData.broadcaster_type === "partner" && (
-              <PartnerBadge size={20} color="#9146FF" />
-            )}
-          </div>
-          <Button>{/*To be implemented*/}Disconnect</Button>
-        </div>
+        <AccountCard />
       </div>
       <div className="">
         <Button onClick={() => navigation("/CreatePrediction")}>
@@ -162,114 +136,7 @@ export default function MainMenu() {
           <strong>My Predictions</strong>
         </Button>
       </div>
-      <div>
-        {(runningOrLastPrediction[0].status === "CANCELED" ||
-          runningOrLastPrediction[0].status === "RESOLVED") && (
-          <ul>
-            <li
-              key={runningOrLastPrediction[0].id}
-              className="mb-4 p-4 border rounded-lg shadow text-center"
-            >
-              <p className="text-center">Previous Prediction</p>
-              <Separator className="my-2" />
-              <strong>{`Title: ${runningOrLastPrediction[0].title}`}</strong>
-
-              {runningOrLastPrediction[0].outcomes &&
-                runningOrLastPrediction[0].outcomes.length > 0 && (
-                  <ul>
-                    {runningOrLastPrediction[0].outcomes.map(
-                      (
-                        outcome: { id: string; title: string; color: string },
-                        idx: number
-                      ) => (
-                        <li key={outcome.id}>
-                          {`Outcome ${idx + 1} -> ${outcome.title}`}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                )}
-              <p>{`Duration: ${runningOrLastPrediction[0].prediction_window} sec`}</p>
-              <p>{`Status: ${runningOrLastPrediction[0].status}`}</p>
-              <div className="flex justify-center gap-3 mt-4">
-                <Button
-                  type="button"
-                  onClick={() =>
-                    startPrediction(
-                      parseToPrediction(runningOrLastPrediction[0])
-                    )
-                  }
-                >
-                  START AGAIN
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={() =>
-                    savePrediction(
-                      parseToPrediction(runningOrLastPrediction[0])
-                    )
-                  }
-                >
-                  SAVE
-                </Button>
-              </div>
-            </li>
-          </ul>
-        )}
-        {/* This section is for displaying predictions that are currently running, and can be ended/closed */}
-        {(runningOrLastPrediction[0].status === "LOCKED" ||
-          runningOrLastPrediction[0].status === "ACTIVE") && (
-          <ul>
-            <li
-              key={runningOrLastPrediction[0].id}
-              className="mb-4 p-4 border rounded-lg shadow text-center"
-            >
-              <p className="text-center">Currently running prediction</p>
-              <Separator className="my-2" />
-              <strong>{`Title: ${runningOrLastPrediction[0].title}`}</strong>
-
-              {runningOrLastPrediction[0].outcomes &&
-                runningOrLastPrediction[0].outcomes.length > 0 && (
-                  <ul>
-                    {runningOrLastPrediction[0].outcomes.map(
-                      (
-                        outcome: { id: string; title: string; color: string },
-                        idx: number
-                      ) => (
-                        <li key={outcome.id}>
-                          {`Outcome ${idx + 1} -> ${outcome.title}`}
-                          <Button
-                            onClick={() =>
-                              endPrediction(
-                                runningOrLastPrediction[0].id,
-                                outcome.id
-                              )
-                            }
-                          >
-                            End
-                          </Button>
-                        </li>
-                      )
-                    )}
-                  </ul>
-                )}
-              <p>{`Duration: ${runningOrLastPrediction[0].prediction_window} sec`}</p>
-              <p>{`Status: ${runningOrLastPrediction[0].status}`}</p>
-              <div className="flex justify-center gap-3 mt-4">
-                <Button
-                  type="button"
-                  onClick={() =>
-                    cancelPrediction(runningOrLastPrediction[0].id)
-                  }
-                >
-                  CANCEL
-                </Button>
-              </div>
-            </li>
-          </ul>
-        )}
-      </div>
+      <PrevPredictionDisplay />
     </div>
   );
 }

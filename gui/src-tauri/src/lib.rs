@@ -1,15 +1,29 @@
 mod twitch_api;
 use serde_json;
 use std::collections::HashMap;
+use tauri::Manager;
 
 #[tauri::command]
-fn read_file(path: String) -> Result<String, String> {
-    std::fs::read_to_string(path).map_err(|e| e.to_string())
+fn read_file(app: tauri::AppHandle, path: String) -> Result<String, String> {
+    let base_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let full_path = base_dir.join(path);
+    std::fs::read_to_string(full_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn write_file(path: String, contents: String) -> Result<(), String> {
-    std::fs::write(path, contents).map_err(|e| e.to_string())
+fn write_file(app: tauri::AppHandle, path: String, contents: String) -> Result<(), String> {
+    let base_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    // ensure the directory exists
+    std::fs::create_dir_all(&base_dir).map_err(|e| e.to_string())?;
+    
+    let full_path = base_dir.join(path);
+    std::fs::write(full_path, contents).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -113,6 +127,16 @@ async fn exchange_code_for_tokens_cmd(
     twitch_api::exchange_code_for_tokens(code, client_id, client_secret, redirect_uri).await
 }
 
+#[tauri::command]
+fn get_file_location(app: tauri::AppHandle, filename: String) -> Result<String, String> {
+    let base_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let full_path = base_dir.join(filename);
+    Ok(full_path.to_string_lossy().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -128,6 +152,7 @@ pub fn run() {
             get_last_predictions_cmd,
             cancel_prediction_cmd,
             end_prediction_cmd,
+            get_file_location,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

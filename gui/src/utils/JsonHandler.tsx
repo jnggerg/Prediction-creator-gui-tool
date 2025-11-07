@@ -60,8 +60,11 @@ export async function savePrediction(prediction: Prediction): Promise<string> {
       path: "my_predictions.json",
       contents: JSON.stringify(preds),
     });
+    console.log("Prediction saved successfully");
     return "Prediction saved successfully";
   } catch (err) {
+    console.error("Failed to save prediction:", err);
+    console.log(prediction);
     return `Failed to save prediction, ${err}`;
   }
 }

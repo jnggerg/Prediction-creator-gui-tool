@@ -7,7 +7,7 @@ export default function AlertMessage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string>("");
 
-  //make "created" message appear only for 2 seconds after saving
+  //make message diappear after 2 seconds
   useEffect(() => {
     if (status !== "saved") return;
 

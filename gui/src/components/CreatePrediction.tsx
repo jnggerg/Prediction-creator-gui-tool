@@ -1,11 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import {
-  loadPredictions,
-  savePrediction,
-  Prediction,
-} from "../utils/JsonHandler";
-import { useEffect, useState, ChangeEvent, FormEvent, MouseEvent } from "react";
+import { savePrediction, Prediction } from "../utils/JsonHandler";
+import { useState, ChangeEvent, FormEvent, MouseEvent } from "react";
 import { useTwitch } from "../utils/TwitchContext";
+import { usePredictions } from "../utils/PredictionsContext";
 import {
   FieldGroup,
   Field,
@@ -19,27 +16,15 @@ import AlertMessage from "../utils/AlertMessage";
 
 export default function CreatePrediction() {
   const { startPrediction } = useTwitch();
-
+  const { predictions, setPredictions } = usePredictions();
   const navigate = useNavigate();
-  const { status, setStatus, setMessage, DisplayMessage } = AlertMessage();
+  const { setStatus, setMessage, DisplayMessage } = AlertMessage();
 
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [formValues, setFormValues] = useState({
     title: "",
     outcomes: "",
     prediction_window: "",
   });
-
-  //make "created" message appear only for 2 seconds after saving
-  useEffect(() => {
-    if (status !== "saved") return;
-
-    const timer = window.setTimeout(() => {
-      setStatus("idle");
-    }, 2000);
-
-    return () => window.clearTimeout(timer);
-  }, [status]);
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
@@ -73,7 +58,8 @@ export default function CreatePrediction() {
       setMessage("A prediction requires at least two unique outcomes");
       return null;
     }
-    const prediction_window = parseInt(formValues.prediction_window) ?? 90; //default to 90 seconds
+    const parsedWindow = Number.parseInt(formValues.prediction_window, 10);
+    const prediction_window = Number.isNaN(parsedWindow) ? 90 : parsedWindow; // default to 90 seconds when input missing/invalid
     if (prediction_window < 30 || prediction_window > 1800) {
       setStatus("error");
       setMessage("Prediction window must be between 30 and 1800 seconds.");
@@ -109,7 +95,6 @@ export default function CreatePrediction() {
         setStatus("saved");
         setMessage("Prediction saved!");
         setFormValues({ title: "", outcomes: "", prediction_window: "" }); //reset form
-        return;
       }
     } catch (error) {
       console.error("Error saving prediction:", error);
@@ -129,35 +114,26 @@ export default function CreatePrediction() {
     }
   }
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function load() {
-      try {
-        const predictions = await loadPredictions();
-        if (isMounted) {
-          setPredictions(predictions);
-        }
-      } catch (error) {
-        console.error("Failed to load predictions:", error);
-      }
+  async function handleStart(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const builtPrediction = buildPredictionFromForm();
+    if (builtPrediction) {
+      setStatus("saved");
+      setMessage("Starting prediction on Twitch...");
+      await startPrediction(builtPrediction);
     }
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }
 
   return (
     <div className="dark bg-background text-foreground p-5">
       <div className="mb-4 w-full flex items-center">
-        <Button onClick={() => navigate(-1)}>⮜ Back</Button>
-        <DisplayMessage />
-        <div className="invisible">fillertext123 </div>
+        <Button onClick={() => navigate(-1)} className="absolute left-4">
+          ⮜ Back
+        </Button>
+        <h1 className="text-2xl font-bold w-full ">Create new prediction</h1>
       </div>
       <div className="min-h-screen items-center justify-center">
-        <h1 className="text-2xl font-bold">Create new prediction</h1>
-
+        <DisplayMessage />
         <form onSubmit={handleSave} noValidate>
           <FieldGroup className="gap-4">
             <FieldSet className="gap-4">
@@ -204,12 +180,7 @@ export default function CreatePrediction() {
                   Save and start
                 </Button>
                 <Button type="submit">Save</Button>
-                <Button
-                  type="button"
-                  onClick={() =>
-                    console.info("TODO: start without saving? implement logic")
-                  }
-                >
+                <Button type="button" onClick={handleStart}>
                   Start
                 </Button>
               </div>

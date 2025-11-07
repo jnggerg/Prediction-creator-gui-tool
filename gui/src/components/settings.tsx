@@ -1,30 +1,62 @@
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { stringifyDotEnv, useTwitchHandler } from "../utils/TwitchHandler";
+import AlertMessage from "@/utils/AlertMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldGroup, Field, FieldSet, FieldLabel } from "@/components/ui/field";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Settings() {
   const navigate = useNavigate();
-  const { settings, setSettings } = useTwitchHandler();
+  const { settings, setSettings, refresh } = useTwitchHandler();
+  const { setStatus, setMessage, DisplayMessage } = AlertMessage();
 
   return (
     <div className="dark bg-background text-foreground min-h-screen items-center p-5 space-y-5">
-      <Button type="button" onClick={() => navigate(-1)}>
-        {"⮜ Back"}
-      </Button>
-      <Button type="button" className="right-0 bg-gray-500">
-        ?
-      </Button>
-
+      <div className="flex justify-between items-center relative">
+        <Button type="button" onClick={() => navigate(-1)}>
+          {"⮜ Back"}
+        </Button>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <h1 className="text-2xl font-bold">Settings</h1>
+        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" className="bg-gray-500">
+                ?
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              Head over to the Twitch Developer console to get your Client ID
+              and Client Secret.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       <div className="items-center justify-center space-y-5">
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <DisplayMessage />
         <form
-          onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+          className=""
+          onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
-            const envText = stringifyDotEnv(settings);
-            invoke("write_file", { path: ".env", contents: envText });
+            try {
+              const envText = stringifyDotEnv(settings);
+              await invoke("write_file", { path: ".env", contents: envText });
+              refresh(); //refresh settings after save, so tokens and other derived data get updated
+              setStatus("saved");
+              setMessage("Settings saved!");
+            } catch (error) {
+              console.error("Failed to write file:", error);
+              setStatus("error");
+              setMessage(`Failed to save: ${error}`);
+            }
           }}
         >
           <FieldGroup>

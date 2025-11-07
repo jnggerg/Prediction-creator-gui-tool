@@ -25,6 +25,7 @@ interface TokenResponse {
 }
 
 export function useTwitchHandler() {
+  const [isLoading, setIsLoading] = useState(true);
   const [settings, setSettings] = useState({
     TWITCH_CLIENT_ID: "",
     TWITCH_CLIENT_SECRET: "",
@@ -54,6 +55,10 @@ export function useTwitchHandler() {
         const data = parseDotEnv(
           await invoke<string>("read_file", { path: ".env" })
         );
+        const location = await invoke("get_file_location", {
+          filename: ".env",
+        });
+        console.log("File is at:", location);
         if (!cancelled) {
           let accessToken = data.TWITCH_ACCESS_TOKEN?.trim() ?? "";
           let refreshToken = data.TWITCH_REFRESH_TOKEN?.trim() ?? "";
@@ -134,6 +139,10 @@ export function useTwitchHandler() {
         }
       } catch (err) {
         console.error("Failed to load env", err);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -388,6 +397,7 @@ polling the Twitch API occasionally to get updates on the running prediction.
   }
 
   return {
+    isLoading,
     isReady,
     credentialsReady,
     settings,
