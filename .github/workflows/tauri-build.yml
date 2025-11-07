@@ -48,7 +48,7 @@ jobs:
           releaseBody: "Automated Tauri build from GitHub Actions"
           releaseDraft: false
           prerelease: false
-          args: --bundles none
+          args: --bundles nsis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # for debugging
