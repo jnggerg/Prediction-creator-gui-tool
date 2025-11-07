@@ -1,4 +1,4 @@
-name: Build Tauri App
+name: Build Tauri App Windows
 
 on:
   push:
@@ -8,10 +8,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
 
     defaults:
       run:
@@ -35,20 +32,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libglib2.0-dev \
-            libwebkit2gtk-4.1-dev \
-            libjavascriptcoregtk-4.1-dev \
-            pkg-config \
-            build-essential
-
       # install npm deps
       - name: Install dependencies
         run: npm ci
@@ -65,9 +48,9 @@ jobs:
           releaseBody: "Automated Tauri build from GitHub Actions"
           releaseDraft: false
           prerelease: false
+          args: --bundles none
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # for debugging
       - name: List produced bundles
         run: ls -R src-tauri/target/release/bundle || true
@@ -75,5 +58,5 @@ jobs:
       - name: Upload Tauri bundles
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-bundles-${{ matrix.platform }}
+          name: tauri-bundles-windows
           path: gui/src-tauri/target/release/bundle
