@@ -1,10 +1,10 @@
-name: Build Tauri (artifacts)
+name: Build Tauri App
 
 on:
   push:
     tags:
-      - "v*" # Runs when you push tags like v0.1.0
-  workflow_dispatch: # Manual trigger in Actions UI
+      - "v*"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,46 +12,53 @@ jobs:
       matrix:
         platform: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
-    env:
-      NODE_VERSION: 20
 
     defaults:
       run:
-        working-directory: gui
+        working-directory: gui # all source files in gui dir
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      #install nodejs
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 20
           cache: "npm"
           cache-dependency-path: gui/package-lock.json
 
+      # install rust
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
 
+      # install npm deps
       - name: Install dependencies
         run: npm ci
 
       - name: Build frontend
         run: npm run build
 
-      - name: Build Tauri bundles
+      # build tauri bundles
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         with:
-          package-manager: "npm"
+          tagName: v__VERSION__
+          releaseName: "Prediction Manager v__VERSION__"
+          releaseBody: "Automated Tauri build from GitHub Actions"
+          releaseDraft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # for debugging
       - name: List produced bundles
         run: ls -R src-tauri/target/release/bundle || true
 
-      - name: Upload artifacts
+      - name: Upload Tauri bundles
         uses: actions/upload-artifact@v4
         with:
           name: tauri-bundles-${{ matrix.platform }}
