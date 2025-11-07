@@ -35,6 +35,18 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libglib2.0-dev \
+            pkg-config \
+            build-essential
+
       # install npm deps
       - name: Install dependencies
         run: npm ci
