@@ -1,4 +1,4 @@
-# 🎯 Prediction Creator GUI Tool
+# Prediction Creator GUI Tool
 
 A lightweight, **Tauri-based desktop app** for Twitch streamers and moderators who want an easier, faster way to manage Predictions. No more typing `/prediction` in chat!
 
@@ -16,7 +16,7 @@ It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impac
 
 ## ✨ Features
 
-- **Saved Predictions:** Keep a list of your frequently used predictions — stored locally and indefinitely.
+- **Saved Predictions:** Keep a list of your frequently used predictions, that are stored locally and indefinitely (unlike on Twitch).
 - **One-Click Control:** Start or end a prediction instantly, without using Twitch chat commands.
 - **Prediction Tracking:** Displays both the **currently running** and **last ran** predictions for quick resolving or restarting.
 - **AI-Generated Suggestions** _(optional, WIP)_ — get AI-created prediction ideas.
@@ -47,6 +47,7 @@ It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impac
 | Local Server | tiny_http                       |
 | Data Storage | JSON + .env                     |
 | Optional AI  | OpenAI API                      |
+| Bundling     | Github Actions                  |
 
 ---
 
