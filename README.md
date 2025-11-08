@@ -1,63 +1,124 @@
-# Prediction Creator GUI Tool
+# 🎯 Prediction Creator GUI Tool
 
-A GUI app that gives the Twitch Predictions a better interface than the chat-integrated one provided by Twitch.
-The app is built in Tauri (not Electron) for low overhead, with a clean, React-based frontend, styled with Shadcn component and Tailwindcss. All backend functionality (read/write from files, Twitch API calls) is handled with Tauri's built-in Rust backend. Everything is stored 100% locally, so you need to use your own Twitch Developer account for API credentials.
+A lightweight, **Tauri-based desktop app** for Twitch streamers and moderators who want an easier, faster way to manage Predictions. No more typing `/prediction` in chat!
 
-## Features
+---
 
-- Save a list of predictions that you wish to run frequently
-- Start saved predictions with just a click
-- No need to manually type /prediction in chat and deal with the clunky built-in UI
-- End / Delete predictions fast, get up-to-date data on currently running prediction info
-- Get AI created Prediction recommendations (optional, WIP)
+## 🧩 Overview
 
-## How it works
-- Currently, the app runs 100% locally, so you have to use your own Twitch API credentials.
-- The Frontend is built with React using Typescript, styled with TailWindcss and Shadcn components.
-- The program stores the desired prediction templates in a Json file in `/gui/src-tauri/my_predictions.json`, which allows for easy manual editing and better performance then running a local SQL/noSQL db.
-- All sensitive information (Twitch clientId, secret, tokens) handled in a .env file inside `/gui/src-tauri/.env`, which you can fill manually or through the app's settings page (tokens get filled on account connect).
+This tool gives you a **simple, local interface** to start, end, and manage Twitch Predictions efficiently.  
+It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impact — perfect for streamers who need to keep their system running smoothly.
 
-## Getting Started
-Currently, the program only runs in dev mode, so it requires some basic setup. (nodejs, npm, rust compiler, etc.)
-You will also need a Twitch Developer account, since the app is fully local.
+> ⚠️ **Note:** Everything in this app is **100% local**.  
+> You’ll need to use your **own Twitch API credentials** (setup explained below).
 
-### Setup Instructions
+---
 
-1. **Create a Twitch Developer Application**
-   - Go to https://dev.twitch.tv/ and log in with your Twitch account (should be the one you wish to run predictions on)
-   - Navigate to https://dev.twitch.tv/console/apps/create and create an app:
-     - Enter any name for your application (not important)
-     - Set the redirect URL to: `http://localhost:1420/oauth/callback` !THIS IS IMPORTANT, SINCE THIS IS THE ENDPOINT THE REDIRECT EXPECTS!
-     - Select a category (not important)
-     - Create the app
+## ✨ Features
 
-2. **Setup environment**
-   - **Windows**: Setting up Tauri dev on Windows is a bit trickier then linux:
-        - Open a PowerShell, and run the setup script: `powershell -ExecutionPolicy Bypass -File .\setup-tauri.ps1`
-        - once Visual Studio opens, you will need to select the “Desktop development with C++” workload, and download it manually
-        - If this alone does not work, I recommend looking into the Tauri docs to find the exact steps needed for your environment: `https://v2.tauri.app/start/prerequisites/#windows`
-          
-   - **Linux(deb)**: Tauri install is much easier, but just in case I have provided a bash script that you can execute for simplicity (uses apt):
-        - chmod +x setup.sh
-        - ./setup.sh
-      
-3. **Run the Application**
-   - After setup is complete, run the main application: (BUNDLING WIP, ONLY DEV BUILD CURRENTLY)
-     - **Windows**: npm run tauri dev 
-     - **Linux(Deb)**: npm run tauri dev
+- **Saved Predictions:** Keep a list of your frequently used predictions — stored locally and indefinitely.
+- **One-Click Control:** Start or end a prediction instantly, without using Twitch chat commands.
+- **Prediction Tracking:** Displays both the **currently running** and **last ran** predictions for quick resolving or restarting.
+- **AI-Generated Suggestions** _(optional, WIP)_ — get AI-created prediction ideas.
 
-4. **Edit the settings**
-   - Enter the following information in the settings:
-     - Client ID (from your Twitch Developer app)
-     - Client Secret (from your Twitch Developer app)
-     - Channel name to run predictions on (needs to be your own channel, as you will need to login through OAuth2 for tokens)
-     - (WIP) Enter OpenAI API key if you want to use AI functionalities (`https://platform.openai.com/`) 
-   - Connect your Twitch account when prompted
+---
 
-## Important Notes
+## ⚙️ How It Works
 
-⚠️ **For Moderators**: If you are just a moderator for the channel, you will need to ask the streamer to either:
-- Login to the app for you
-- Manually get both access and refresh tokens with the needed scopes (manage prediction) and send them to you (WIP for easier setup)
+- Built with **Tauri (Rust + React)** for ultra-light performance.
+- UI created using **Shadcn components** and **TailwindCSS** for a clean, minimal aesthetic.
+- Data saved locally at: C:\Users<USERNAME>\AppData\Roaming\com.TwitchPredictionTool.gui
+  Includes:
+- `.env` file for Twitch secrets
+- `.json` file for saved predictions
+- Backend uses **Rust** for:
+- File read/write operations
+- Twitch API calls
+- Hosting a small [tiny_http](https://github.com/tiny-http/tiny-http) server for handling the OAuth2 login flow.
 
+---
 
+## 🧱 Tech Stack
+
+| Layer        | Technology                      |
+| ------------ | ------------------------------- |
+| Frontend     | React + Shadcn/UI + TailwindCSS |
+| Backend      | Rust (Tauri)                    |
+| Local Server | tiny_http                       |
+| Data Storage | JSON + .env                     |
+| Optional AI  | OpenAI API                      |
+
+---
+
+## 🚀 Getting Started
+
+You can download the prebuilt **Windows executable** from the [Releases Page](https://github.com/jnggerg/Prediction-creator-gui-tool/releases/tag/v0.1.0).
+
+> Currently, only **Windows** builds are available.  
+> For **Linux**, you’ll need to run the app in development mode (instructions below).
+
+---
+
+## 🛠️ Setup Instructions
+
+### 1. Create a Twitch Developer Application
+
+1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console) and log in with the Twitch account you want to manage predictions for.
+2. Click **“Create an Application”**:
+
+- **Name:** Any name you like
+- **Redirect URL:**
+  ```
+  http://localhost:3000/callback
+  ```
+  ⚠️ _This is important — it’s where OAuth redirects after login. The redirect URI is hardcoded, so not entering this exact one will break the app_
+- **Category:** Choose any category
+- Click **Create**
+
+---
+
+### 2. Set Up Your Environment
+
+#### Windows (11/10)
+
+- Download and run the `.exe` from the [Releases Page](https://github.com/jnggerg/Prediction-creator-gui-tool/releases/tag/v0.1.0).
+- To run in **Dev Mode**, follow the [Tauri setup guide for Windows](https://v2.tauri.app/start/prerequisites/#windows).
+
+#### Linux (Dev Mode Only)
+
+- No prebuilt binaries yet.
+- Follow the [Tauri setup guide for Linux](https://v2.tauri.app/start/prerequisites/#linux) to configure your development environment.
+
+---
+
+### 3. Configure App Settings
+
+When you first launch the app, you’ll be asked for the following credentials:
+
+- **Client ID** – from your Twitch Developer App
+- **Client Secret** – from your Twitch Developer App
+- **Channel Name** – the Twitch channel to manage predictions for
+- _(Optional)_ **OpenAI API Key** – for AI-generated prediction ideas  
+  → [Get one here](https://platform.openai.com/)
+
+---
+
+### 4. Authenticate via OAuth
+
+After entering your credentials:
+
+1. The app will open a browser window for you to log into Twitch.
+2. Once authenticated, the app will receive an OAuth token and you’ll be ready to go.
+3. You can later disconnect or switch accounts via the settings menu (requires new Twitch credentials setup).
+
+---
+
+## Notes
+
+### For Moderators
+
+If you’re a moderator and not the channel owner:
+
+- Ask the streamer to log in through the app **once** to authorize your access.
+- Or, manually obtain both **access** and **refresh tokens** (with the `manage:predictions` scope) and input them into the app. For this i recommend using the [Twitch token generator](https://twitchtokengenerator.com/)
+  _(Simplified setup for moderators is WIP.)_
