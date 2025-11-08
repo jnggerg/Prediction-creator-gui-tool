@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { stringifyDotEnv, useTwitchHandler } from "../utils/TwitchHandler";
+import { stringifyDotEnv } from "../utils/TwitchHandler";
+import { useTwitch } from "../utils/TwitchContext";
 import AlertMessage from "@/utils/AlertMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import {
 
 export function Settings() {
   const navigate = useNavigate();
-  const { settings, setSettings, refresh } = useTwitchHandler();
+  const { settings, setSettings, refresh } = useTwitch();
   const { setStatus, setMessage, DisplayMessage } = AlertMessage();
 
   return (
@@ -49,9 +50,10 @@ export function Settings() {
             try {
               const envText = stringifyDotEnv(settings);
               await invoke("write_file", { path: ".env", contents: envText });
-              refresh(); //refresh settings after save, so tokens and other derived data get updated
               setStatus("saved");
               setMessage("Settings saved!");
+              // Refresh after a small delay to ensure file write is complete
+              setTimeout(() => refresh(), 100);
             } catch (error) {
               console.error("Failed to write file:", error);
               setStatus("error");

@@ -125,14 +125,14 @@ export default function CreatePrediction() {
   }
 
   return (
-    <div className="dark bg-background text-foreground p-5">
+    <div className="dark bg-background min-h-screen text-foreground p-5">
       <div className="mb-4 w-full flex items-center">
         <Button onClick={() => navigate(-1)} className="absolute left-4">
           ⮜ Back
         </Button>
         <h1 className="text-2xl font-bold w-full ">Create new prediction</h1>
       </div>
-      <div className="min-h-screen items-center justify-center">
+      <div className="items-center justify-center">
         <DisplayMessage />
         <form onSubmit={handleSave} noValidate>
           <FieldGroup className="gap-4">

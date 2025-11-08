@@ -1,24 +1,22 @@
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTwitch } from "../utils/TwitchContext";
 import AccountCard from "@/components/ui/accountCard";
 import { Button } from "@/components/ui/button";
 import { PrevPredictionDisplay } from "@/components/ui/prevPredictionDisplay";
+import { exchangeCodeForTokens, verifyState } from "../utils/OAuthCallback";
 
 export default function MainMenu() {
   const navigation = useNavigate();
-  const { isReady, credentialsReady, settings } = useTwitch();
+  const { isReady, credentialsReady, settings, refresh } = useTwitch();
 
   //checking timeout - if loading takes more than 2 seconds, that means that credentials are likely missing
   const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
 
   useEffect(() => {
-    const isDev = import.meta.env.DEV;
-    if (isDev) {
-      return;
-    }
-
     async function startTinyHttp() {
       try {
         await invoke("start_oauth_server");
@@ -30,6 +28,45 @@ export default function MainMenu() {
 
     startTinyHttp();
   }, []);
+
+  // listening for the OAuth callback from the backend
+  useEffect(() => {
+    const unlisten = listen<string>("oauth-callback", async (event) => {
+      console.log("Received OAuth callback:", event.payload);
+      const queryString = event.payload;
+
+      const params = new URLSearchParams(queryString);
+      const error = params.get("error");
+      const code = params.get("code");
+      const returnedState = params.get("state");
+
+      if (error) {
+        console.error("Twitch authorization failed:", error);
+        return;
+      }
+
+      if (!code || !returnedState) {
+        console.error("Missing code or state in OAuth callback");
+        return;
+      }
+
+      if (!(await verifyState(returnedState))) {
+        console.error("OAuth state verification failed");
+        return;
+      }
+
+      await exchangeCodeForTokens(
+        code,
+        settings.TWITCH_CLIENT_ID,
+        settings.TWITCH_CLIENT_SECRET
+      );
+      refresh();
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [refresh, settings]);
 
   useEffect(() => {
     if (isReady) {
@@ -45,10 +82,6 @@ export default function MainMenu() {
   }, [isReady]);
 
   async function handleTwitchAuth() {
-    if (!credentialsReady) {
-      return;
-    }
-
     //state for csrf
     const state =
       window.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
@@ -62,19 +95,32 @@ export default function MainMenu() {
     const scope = encodeURIComponent(
       "channel:manage:predictions channel:read:predictions"
     );
-    const redirectUri = import.meta.env.DEV
-      ? "http://localhost:1420/oauth/callback" // for dev mode with vite
-      : "http://localhost:3000/callback"; // for prod with tiny_http
+    const redirectUri = "http://localhost:3000/callback";
 
     const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${
       settings.TWITCH_CLIENT_ID
     }&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=${scope}&state=${state}&force_verify=true`;
-    // adding force_verify to params, so user can change account if wanted and
-    //  prevents automatic login after disconnecting account, WIP
+    // adding force_verify to params, so user can change account if wanted
 
-    window.location.replace(authUrl);
+    // create a new Tauri window for OAuth
+    const oauthWindow = new WebviewWindow("twitch-oauth", {
+      url: authUrl,
+      title: "Connect Twitch Account",
+      width: 500,
+      height: 700,
+      center: true,
+      resizable: false,
+    });
+
+    await oauthWindow.once("tauri://created", () => {
+      console.log("OAuth window created");
+    });
+
+    await oauthWindow.once("tauri://error", (e) => {
+      console.error("Failed to create OAuth window:", e);
+    });
   }
 
   //if credentials are missing, force user to go into settings and add them

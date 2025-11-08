@@ -12,7 +12,7 @@ export default function MyPredictions() {
   const { setStatus, setMessage, DisplayMessage } = AlertMessage();
 
   return (
-    <div className="dark bg-background text-foreground p-5 flex flex-col items-center">
+    <div className="dark bg-background min-h-screen text-foreground p-5 flex flex-col items-center">
       <div className="w-full max-w-2xl flex flex-col items-start mb-6">
         <Button onClick={() => navigate(-1)} className="absolute left-4">
           ⮜ Back

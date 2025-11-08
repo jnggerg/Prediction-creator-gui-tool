@@ -1,6 +1,6 @@
 import { Prediction } from "./JsonHandler";
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 export function parseDotEnv(contents: string): Record<string, string> {
   return contents
@@ -133,7 +133,7 @@ export function useTwitchHandler() {
           });
         }
       } catch (err) {
-        console.error("Failed to load env", err);
+        console.error("Failed to get data", err);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -151,11 +151,11 @@ export function useTwitchHandler() {
   //checking if the basic credentials are set
   const [credentialsReady, setCredentialsReady] = useState(false);
   useEffect(() => {
-    setCredentialsReady(
+    const ready =
       !!settings.TWITCH_CLIENT_ID &&
-        !!settings.TWITCH_CLIENT_SECRET &&
-        !!settings.TWITCH_CHANNEL_NAME
-    );
+      !!settings.TWITCH_CLIENT_SECRET &&
+      !!settings.TWITCH_CHANNEL_NAME;
+    setCredentialsReady(ready);
   }, [settings]);
 
   const [isReady, setIsReady] = useState(false);
@@ -391,17 +391,27 @@ polling the Twitch API occasionally to get updates on the running prediction.
     }
   }
 
-  return {
-    isLoading,
-    isReady,
-    credentialsReady,
-    settings,
-    setSettings,
-    streamerData,
-    runningOrLastPrediction,
-    startPrediction,
-    endPrediction,
-    cancelPrediction,
-    refresh: () => setRefreshKey((prev) => prev + 1),
-  };
+  return useMemo(
+    () => ({
+      isLoading,
+      isReady,
+      credentialsReady,
+      settings,
+      setSettings,
+      streamerData,
+      runningOrLastPrediction,
+      startPrediction,
+      endPrediction,
+      cancelPrediction,
+      refresh: () => setRefreshKey((prev) => prev + 1),
+    }),
+    [
+      isLoading,
+      isReady,
+      credentialsReady,
+      settings,
+      streamerData,
+      runningOrLastPrediction,
+    ]
+  );
 }

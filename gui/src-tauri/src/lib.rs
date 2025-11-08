@@ -1,53 +1,61 @@
 mod twitch_api;
 use serde_json;
 use std::collections::HashMap;
-use tauri::Manager;
-use std::thread;
-use tiny_http::{Server, Response};
+use std::sync::{Mutex};
+use tauri::{Manager, Emitter};
 
+// global flag to track if server is already running
+static SERVER_RUNNING: Mutex<bool> = Mutex::new(false);
 
 #[tauri::command]
-fn start_oauth_server() -> Result<(), String> {
+fn start_oauth_server(app: tauri::AppHandle) -> Result<(), String> {
+    use std::thread;
+    use tiny_http::{Server, Response};
+
+    // check if server is already running
+    let mut running = SERVER_RUNNING.lock().unwrap();
+    if *running {
+        println!("OAuth server already running, skipping...");
+        return Ok(());
+    }
+    *running = true;
+    drop(running); // release lock
+
     let port = 3000;
-    
+
     thread::spawn(move || {
-        let server = Server::http(format!("127.0.0.1:{}", port))
-            .map_err(|e| format!("Failed to start OAuth server: {}", e))
-            .unwrap();
-        
+        let server = match Server::http(format!("127.0.0.1:{}", port)) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Failed to start OAuth server: {}", e);
+                // Reset the flag if we failed to start
+                if let Ok(mut running) = SERVER_RUNNING.lock() {
+                    *running = false;
+                }
+                return;
+            }
+        };
+
         println!("OAuth callback server listening on http://localhost:{}", port);
-        
+
         for request in server.incoming_requests() {
             let url = request.url();
-            
-            // Extract the full query string
             let query = url.split('?').nth(1).unwrap_or("");
-            
-            let html = format!(r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Redirecting...</title>
-</head>
-<body>
-    <p>Redirecting to app...</p>
-    <script>
-        // Redirect with hash instead of path
-        window.location.href = 'tauri://localhost/#/oauth/callback?{}';
-    </script>
-</body>
-</html>
-"#, query);
-            
-            let response = Response::from_string(html)
-                .with_header(
-                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap()
-                );
+
+            // emit event to main window
+            let _ = app.emit("oauth-callback", query);
+
+            // send minimal response
+            let response = Response::from_string("OK");
             let _ = request.respond(response);
+
+            // close the OAuth window if it exists
+            if let Some(window) = app.get_webview_window("twitch-oauth") {
+                let _ = window.close();
+            }
         }
     });
-    
+
     Ok(())
 }
 
@@ -81,11 +89,11 @@ async fn create_twitch_prediction_cmd(args: HashMap<String, String>) -> Result<S
     let title = args.get("title").cloned().unwrap_or_default();
     let broadcaster_id = args.get("broadcaster_id").cloned().unwrap_or_default();
 
-    // Parse comma-separated options into Vec<Outcome>
+    // parse comma-separated options into Vec<Outcome>
     let outcomes_json = args.get("outcomes").cloned().unwrap_or_default();
     let outcome_titles: Vec<String> = serde_json::from_str(&outcomes_json).unwrap_or_default();
 
-    // Convert to Outcome structs
+    // convert to outcome structs
     let outcomes: Vec<twitch_api::Outcome> = outcome_titles
         .into_iter()
         .map(|title| twitch_api::Outcome { title })
@@ -190,6 +198,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             write_file,
             read_file,
