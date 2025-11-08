@@ -7,7 +7,7 @@ A lightweight, **Tauri-based desktop app** for Twitch streamers and moderators w
 ## 🧩 Overview
 
 This tool gives you a **simple, local interface** to start, end, and manage Twitch Predictions efficiently.  
-It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impact — perfect for streamers who need to keep their system running smoothly.
+It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impact, you will see no change in performance even while streaming.
 
 > ⚠️ **Note:** Everything in this app is **100% local**.  
 > You’ll need to use your **own Twitch API credentials** (setup explained below).
@@ -26,7 +26,7 @@ It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impac
 ## ⚙️ How It Works
 
 - Built with **Tauri (Rust + React)** for ultra-light performance.
-- UI created using **Shadcn components** and **TailwindCSS** for a clean, minimal aesthetic.
+- UI created using in **Typescript**, using **Shadcn components** and **TailwindCSS** for a clean, minimal aesthetic.
 - Data saved locally at: C:\Users<USERNAME>\AppData\Roaming\com.TwitchPredictionTool.gui
   Includes:
 - `.env` file for Twitch secrets
