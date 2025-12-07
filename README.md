@@ -19,7 +19,6 @@ It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impac
 - **Saved Predictions:** Keep a list of your frequently used predictions, that are stored locally and indefinitely (unlike on Twitch).
 - **One-Click Control:** Start or end a prediction instantly, without using Twitch chat commands.
 - **Prediction Tracking:** Displays both the **currently running** and **last ran** predictions for quick resolving or restarting.
-- **AI-Generated Suggestions** _(optional, WIP)_ — get AI-created prediction ideas.
 
 ---
 
@@ -46,7 +45,6 @@ It’s built on [**Tauri**](https://v2.tauri.app/) for minimal performance impac
 | Backend      | Rust (Tauri)                    |
 | Local Server | tiny_http                       |
 | Data Storage | JSON + .env                     |
-| Optional AI  | OpenAI API                      |
 | Bundling     | Github Actions                  |
 
 ---
@@ -99,8 +97,6 @@ When you first launch the app, you’ll be asked for the following credentials:
 - **Client ID** – from your Twitch Developer App
 - **Client Secret** – from your Twitch Developer App
 - **Channel Name** – the Twitch channel to manage predictions for
-- _(Optional)_ **OpenAI API Key** – for AI-generated prediction ideas  
-  → [Get one here](https://platform.openai.com/)
 
 ---
 
